@@ -832,7 +832,7 @@
       // Get this from: Firebase Console > Project Settings > Your apps > Web app
       const firebaseConfig = {
         apiKey: "AIzaSyA9rDtULYw5qiZeAqudIU-c4aJFAR-ZtcI",
-        authDomain: "http://management-and-organizat-7ccf9.firebaseapp.com",
+        authDomain: "management-and-organizat-7ccf9.firebaseapp.com",
         databaseURL: "https://management-and-organizat-7ccf9-default-rtdb.firebaseio.com",
         projectId: "management-and-organizat-7ccf9",
         storageBucket: "management-and-organizat-7ccf9.firebasestorage.app",
@@ -840,38 +840,9 @@
         appId: "1:601222256182:web:4779d881961eae10c96a97"
       };
 
-      // Initialize Firebase (only if config is provided)
-      let database = null;
-      let notesRef = null;
-      const WALL_ID = "default-wall"; // Change this to create separate walls
-
-      if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        try {
-          firebase.initializeApp(firebaseConfig);
-          database = firebase.database();
-          notesRef = database.ref('walls/' + WALL_ID + '/notes');
-          console.log("Firebase connected successfully!");
-          updateConnectionStatus("connected", "Connected - Shared");
-          
-          // Monitor connection status
-          database.ref('.info/connected').on('value', (snapshot) => {
-            if (snapshot.val() === true) {
-              updateConnectionStatus("connected", "Connected - Shared");
-            } else {
-              updateConnectionStatus("disconnected", "Disconnected");
-            }
-          });
-        } catch (error) {
-          console.error("Firebase initialization error:", error);
-          updateConnectionStatus("disconnected", "Connection Error");
-        }
-      } else {
-        console.warn("Firebase not configured. Using local storage only (not shared across devices).");
-        updateConnectionStatus("local", "Local Only - Not Shared");
-      }
-
       const MAX_WORDS = 4;
 
+      // Get DOM elements first
       const addNoteBtn = document.getElementById("addNoteBtn");
       const viewAllBtn = document.getElementById("viewAllBtn");
       const shuffleBtn = document.getElementById("shuffleBtn");
@@ -904,11 +875,47 @@
       let allNotes = [];
       let notesMap = new Map(); // Track notes by ID for Firebase sync
 
-      // Update connection status
+      // Update connection status - must be defined before Firebase init
       function updateConnectionStatus(status, text) {
-        connectionStatus.style.display = "flex";
-        connectionStatus.className = "connection-status " + status;
-        connectionStatusText.textContent = text;
+        if (connectionStatus && connectionStatusText) {
+          connectionStatus.style.display = "flex";
+          connectionStatus.className = "connection-status " + status;
+          connectionStatusText.textContent = text;
+        }
+      }
+
+      // Initialize Firebase (only if config is provided)
+      let database = null;
+      let notesRef = null;
+      const WALL_ID = "default-wall"; // Change this to create separate walls
+
+      if (typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        try {
+          firebase.initializeApp(firebaseConfig);
+          database = firebase.database();
+          notesRef = database.ref('walls/' + WALL_ID + '/notes');
+          console.log("Firebase connected successfully!");
+          updateConnectionStatus("connected", "Connected - Shared");
+          
+          // Monitor connection status
+          database.ref('.info/connected').on('value', (snapshot) => {
+            if (snapshot.val() === true) {
+              updateConnectionStatus("connected", "Connected - Shared");
+            } else {
+              updateConnectionStatus("disconnected", "Disconnected");
+            }
+          });
+        } catch (error) {
+          console.error("Firebase initialization error:", error);
+          updateConnectionStatus("disconnected", "Connection Error");
+        }
+      } else {
+        if (typeof firebase === 'undefined') {
+          console.warn("Firebase SDK not loaded. Using local storage only.");
+        } else {
+          console.warn("Firebase not configured. Using local storage only (not shared across devices).");
+        }
+        updateConnectionStatus("local", "Local Only - Not Shared");
       }
 
       function openModal() {
@@ -936,24 +943,41 @@
         viewAllModalBackdrop.setAttribute("aria-hidden", "true");
       }
 
-      addNoteBtn.addEventListener("click", openModal);
-      viewAllBtn.addEventListener("click", openViewAllModal);
-      modalCloseBtn.addEventListener("click", closeModal);
-      viewAllCloseBtn.addEventListener("click", closeViewAllModal);
-      viewAllCloseBtn2.addEventListener("click", closeViewAllModal);
-      cancelBtn.addEventListener("click", closeModal);
+      // Set up event listeners
+      if (addNoteBtn) {
+        addNoteBtn.addEventListener("click", openModal);
+      }
+      if (viewAllBtn) {
+        viewAllBtn.addEventListener("click", openViewAllModal);
+      }
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener("click", closeModal);
+      }
+      if (viewAllCloseBtn) {
+        viewAllCloseBtn.addEventListener("click", closeViewAllModal);
+      }
+      if (viewAllCloseBtn2) {
+        viewAllCloseBtn2.addEventListener("click", closeViewAllModal);
+      }
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", closeModal);
+      }
 
-      modalBackdrop.addEventListener("click", (e) => {
-        if (e.target === modalBackdrop) {
-          closeModal();
-        }
-      });
+      if (modalBackdrop) {
+        modalBackdrop.addEventListener("click", (e) => {
+          if (e.target === modalBackdrop) {
+            closeModal();
+          }
+        });
+      }
 
-      viewAllModalBackdrop.addEventListener("click", (e) => {
-        if (e.target === viewAllModalBackdrop) {
-          closeViewAllModal();
-        }
-      });
+      if (viewAllModalBackdrop) {
+        viewAllModalBackdrop.addEventListener("click", (e) => {
+          if (e.target === viewAllModalBackdrop) {
+            closeViewAllModal();
+          }
+        });
+      }
 
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
