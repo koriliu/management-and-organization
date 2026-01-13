@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
-        /* Custom scrollbar for better aesthetics */
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -24,6 +24,14 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.5);
         }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -36,12 +44,10 @@
         import { 
             getAuth, 
             signInAnonymously, 
-            onAuthStateChanged, 
-            signInWithCustomToken 
+            onAuthStateChanged 
         } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { 
             getFirestore, 
-            initializeFirestore,
             collection, 
             addDoc, 
             onSnapshot, 
@@ -49,8 +55,14 @@
             orderBy, 
             serverTimestamp 
         } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import {
+            getStorage,
+            ref,
+            uploadBytes,
+            getDownloadURL
+        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js';
 
-        // --- Icons (Inline SVGs to remove dependencies) ---
+        // --- Icons ---
         const Camera = ({ size = 24, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
         );
@@ -73,41 +85,26 @@
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         );
 
-        // --- Configuration & Initialization ---
-        
-        // NOTE FOR GOOGLE SITES USERS:
-        // Replace the function below with your actual Firebase config object 
-        // if using outside of this preview environment.
-        const getFirebaseConfig = () => {
-            if (typeof window.__firebase_config !== 'undefined') {
-                return JSON.parse(window.__firebase_config);
-            }
-            // REPLACE THIS WITH YOUR CONFIG FROM FIREBASE CONSOLE
-            return {
-                apiKey: "AIzaSyA9rDtULYw5qiZeAqudIU-c4aJFAR-ZtcI",
-                authDomain: "management-and-organizat-7ccf9.firebaseapp.com",
-                databaseURL: "https://management-and-organizat-7ccf9-default-rtdb.firebaseio.com",
-                projectId: "management-and-organizat-7ccf9",
-                storageBucket: "management-and-organizat-7ccf9.firebasestorage.app",
-                messagingSenderId: "601222256182",
-                appId: "1:601222256182:web:4779d881961eae10c96a97"
-            };
+        // --- Firebase Configuration ---
+        // REPLACE THIS WITH YOUR FIREBASE CONFIG (see setup instructions)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
-        const firebaseConfig = getFirebaseConfig();
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        
-        // FIX: Use initializeFirestore with experimentalForceLongPolling to prevent
-        // connectivity issues in iframe/restricted environments.
-        const db = initializeFirestore(app, {
-            experimentalForceLongPolling: true,
-        });
-        
-        // Check for environment app ID or use default
-        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-classroom';
+        const db = getFirestore(app);
+        const storage = getStorage(app);
 
-        // --- Helper: Image Compression ---
+        // Collection name (simplified)
+        const COLLECTION_NAME = 'whiteboard_submissions';
+
+        // --- Image Compression Helper ---
         const compressImage = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -117,8 +114,8 @@
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const MAX_HEIGHT = 800;
+                        const MAX_WIDTH = 1200;
+                        const MAX_HEIGHT = 1200;
                         let width = img.width;
                         let height = img.height;
 
@@ -138,7 +135,14 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                        
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('Failed to compress image'));
+                            }
+                        }, 'image/jpeg', 0.85);
                     };
                     img.onerror = (error) => reject(error);
                 };
@@ -170,9 +174,11 @@
                             <span className="bg-blue-600 px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wider">
                                 Group {submission.groupNumber}
                             </span>
-                            <span className="text-gray-400 text-sm">
-                                {new Date(submission.createdAt?.seconds * 1000).toLocaleTimeString()}
-                            </span>
+                            {submission.createdAt && (
+                                <span className="text-gray-400 text-sm">
+                                    {new Date(submission.createdAt.seconds * 1000).toLocaleString()}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -204,7 +210,6 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                // Basic validation
                 if (!file || !groupNumber) {
                     alert("Please select a file and enter a group number.");
                     return;
@@ -225,7 +230,6 @@
                         </div>
                         
                         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                            {/* Image Upload Area */}
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
                                 className={`
@@ -254,7 +258,6 @@
                                 />
                             </div>
 
-                            {/* Group Number Input */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Group Number</label>
                                 <div className="relative">
@@ -272,14 +275,13 @@
                                 </div>
                             </div>
 
-                            {/* Submit Button */}
                             <button
                                 type="submit"
                                 disabled={isUploading}
                                 className={`
                                     w-full py-3 px-4 rounded-xl text-white font-medium shadow-lg shadow-blue-500/20
                                     flex items-center justify-center gap-2
-                                    ${(isUploading) 
+                                    ${isUploading 
                                         ? 'bg-slate-300 cursor-not-allowed shadow-none' 
                                         : 'bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all'}
                                 `}
@@ -287,7 +289,7 @@
                                 {isUploading ? (
                                     <>
                                         <Loader2 className="animate-spin" size={20} />
-                                        Compressing & Uploading...
+                                        Uploading...
                                     </>
                                 ) : (
                                     "Post to Whiteboard"
@@ -308,43 +310,32 @@
             const [isUploading, setIsUploading] = useState(false);
             const [activeSubmission, setActiveSubmission] = useState(null);
             const [loading, setLoading] = useState(true);
-            const [configError, setConfigError] = useState(false);
+            const [error, setError] = useState(null);
 
-            // 1. Initialize Auth
+            // Initialize Auth
             useEffect(() => {
-                // Config Check
-                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-                    setConfigError(true);
-                    setLoading(false);
-                    return;
-                }
-
                 const initAuth = async () => {
-                    // Try to use custom token if available in environment, else anonymous
                     try {
-                        if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                            await signInWithCustomToken(auth, window.__initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        await signInAnonymously(auth);
                     } catch (e) {
                         console.error("Auth failed:", e);
-                        // Optional: Alert on persistent failure
-                        // alert("Authentication failed. Check your authorized domains in Firebase Console.");
+                        setError("Authentication failed. Please check Firebase configuration.");
+                        setLoading(false);
                     }
                 };
                 initAuth();
                 
                 return onAuthStateChanged(auth, (u) => {
                     setUser(u);
+                    if (u) setLoading(false);
                 });
             }, []);
 
-            // 2. Subscribe to Firestore Data
+            // Subscribe to Firestore Data
             useEffect(() => {
                 if (!user) return;
 
-                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'whiteboard_submissions');
+                const collectionRef = collection(db, COLLECTION_NAME);
                 const q = query(collectionRef, orderBy('createdAt', 'desc'));
 
                 const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -353,40 +344,51 @@
                         ...doc.data()
                     }));
                     setSubmissions(docs);
-                    setLoading(false);
                 }, (error) => {
                     console.error("Firestore error:", error);
-                    setLoading(false);
+                    setError("Failed to load submissions. Check Firestore rules.");
                 });
 
                 return () => unsubscribe();
             }, [user]);
 
-            // 3. Handle Upload
+            // Handle Upload
             const handleUpload = async (file, groupNumber) => {
-                // Critical Fix: Diagnostic alert if user is not connected
                 if (!user) {
-                    alert("Not connected to server.\n\nPossible reasons:\n1. Firebase Configuration is incorrect.\n2. This domain (sites.google.com) is not authorized in Firebase Console.\n\nPlease refresh the page and try again.");
+                    alert("Not authenticated. Please refresh the page.");
                     return;
                 }
                 
                 setIsUploading(true);
+                setError(null);
 
                 try {
-                    const compressedBase64 = await compressImage(file);
+                    // Compress image
+                    const compressedBlob = await compressImage(file);
                     
-                    const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'whiteboard_submissions');
+                    // Upload to Firebase Storage
+                    const timestamp = Date.now();
+                    const fileName = `group_${groupNumber}_${timestamp}.jpg`;
+                    const storageRef = ref(storage, `whiteboard/${fileName}`);
+                    
+                    await uploadBytes(storageRef, compressedBlob);
+                    const downloadURL = await getDownloadURL(storageRef);
+                    
+                    // Save metadata to Firestore
+                    const collectionRef = collection(db, COLLECTION_NAME);
                     await addDoc(collectionRef, {
-                        imageUrl: compressedBase64,
+                        imageUrl: downloadURL,
                         groupNumber: groupNumber,
                         createdAt: serverTimestamp(),
-                        userId: user.uid
+                        userId: user.uid,
+                        fileName: fileName
                     });
                     
                     alert("Success! Your work has been uploaded.");
                     setIsModalOpen(false);
                 } catch (error) {
                     console.error("Upload failed:", error);
+                    setError("Upload failed: " + error.message);
                     alert("Upload failed: " + error.message);
                 } finally {
                     setIsUploading(false);
@@ -407,8 +409,6 @@
                         backgroundSize: 'cover'
                     }}
                 >
-                    
-                    {/* Header */}
                     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-white/40 shadow-sm">
                         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -432,15 +432,14 @@
                         </div>
                     </header>
 
-                    {/* Main Grid */}
                     <main className="max-w-7xl mx-auto px-4 py-8">
-                        
-                        {configError ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-white drop-shadow-md bg-red-500/80 rounded-xl p-8 max-w-lg mx-auto text-center">
-                                <h2 className="text-2xl font-bold mb-2">Configuration Error</h2>
-                                <p className="font-medium">Please edit the HTML code and replace "YOUR_API_KEY" with your actual Firebase project details.</p>
+                        {error && (
+                            <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                                {error}
                             </div>
-                        ) : loading ? (
+                        )}
+                        
+                        {loading ? (
                             <div className="flex flex-col items-center justify-center h-64 text-white drop-shadow-md">
                                 <Loader2 className="animate-spin mb-4" size={32} />
                                 <p className="font-medium text-lg">Loading whiteboard...</p>
@@ -451,7 +450,7 @@
                                     <Camera size={48} className="text-blue-400" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-slate-800 drop-shadow-sm">The board is empty</h3>
-                                <p className="max-w-xs text-center mt-2 text-slate-700 font-medium">Be the first group to submit your work! Click the button above.</p>
+                                <p className="max-w-xs text-center mt-2 text-slate-700 font-medium">Be the first group to submit your work!</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -461,25 +460,18 @@
                                         onClick={() => setActiveSubmission(item)}
                                         className="group relative aspect-[3/4] bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-zoom-in overflow-hidden border-4 border-white hover:-translate-y-1 hover:rotate-1"
                                     >
-                                        {/* Image */}
                                         <img 
                                             src={item.imageUrl} 
                                             alt={`Group ${item.groupNumber}`} 
                                             className="w-full h-full object-cover"
                                             loading="lazy"
                                         />
-                                        
-                                        {/* Overlay Gradient */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/90 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                                        
-                                        {/* Hover Icon */}
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                             <div className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white border border-white/50">
                                                 <Maximize2 size={24} />
                                             </div>
                                         </div>
-
-                                        {/* Footer Content */}
                                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
                                             <div className="flex items-center justify-between">
                                                 <span className="font-bold text-lg tracking-tight drop-shadow-md">Group {item.groupNumber}</span>
@@ -491,7 +483,6 @@
                         )}
                     </main>
 
-                    {/* Modals */}
                     <UploadModal 
                         isOpen={isModalOpen} 
                         onClose={() => setIsModalOpen(false)} 
