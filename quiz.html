@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management Principles Race - MM2021</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+        }
+        h1, h2, h3, button {
+            font-family: 'Fredoka', sans-serif;
+        }
+        
+        /* Animation Classes */
+        .slide-in {
+            animation: slideIn 0.5s ease-out forwards;
+        }
+        .pop-in {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            query, 
+            orderBy, 
+            serverTimestamp 
+        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        
+        // --- ICONS ---
+        const Trophy = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+        const Clock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+        const Check = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+        const Play = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+        const ArrowRight = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
+
+         // --- FIREBASE CONFIG ---
+         // REPLACE THIS WITH YOUR CONFIG FROM FIREBASE CONSOLE
+         const firebaseConfig = {
+             apiKey: "AIzaSyCK2T1hxyJvXa-KY69NGa-VoTOzdeILg_c",
+             authDomain: "lecture1-whiteboard.firebaseapp.com",
+             projectId: "lecture1-whiteboard",
+             storageBucket: "lecture1-whiteboard.firebasestorage.app",
+             messagingSenderId: "112620583088",
+             appId: "1:112620583088:web:f4cefe8a806d109d08a375"
+         };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Collection name
+        const COLLECTION_NAME = 'quiz_scores';
+        const TOTAL_QUESTIONS = 9;
+
+        // --- QUIZ DATA ---
+        const QUIZ_QUESTIONS = [
+            // PART 1: FUNCTIONS (4 Questions)
+            {
+                id: 1,
+                scenario: "You decide that the class project will be a 'Music Festival' and set a budget of $5,000.",
+                question: "Which function of management are you performing?",
+                options: ["Planning", "Organizing", "Leading", "Controlling"],
+                correct: "Planning"
+            },
+            {
+                id: 2,
+                scenario: "You assign Tim to handle marketing and Sarah to handle logistics for the festival.",
+                question: "Which function of management are you performing?",
+                options: ["Planning", "Organizing", "Leading", "Controlling"],
+                correct: "Organizing"
+            },
+            {
+                id: 3,
+                scenario: "Two team members are arguing about the music choice. You step in to resolve the conflict and boost morale.",
+                question: "Which function of management are you performing?",
+                options: ["Planning", "Organizing", "Leading", "Controlling"],
+                correct: "Leading"
+            },
+            {
+                id: 4,
+                scenario: "The festival is over. You compare the actual tickets sold against your original goal.",
+                question: "Which function of management are you performing?",
+                options: ["Planning", "Organizing", "Leading", "Controlling"],
+                correct: "Controlling"
+            },
+            // PART 2: ROLES (5 Questions)
+            {
+                id: 5,
+                scenario: "You give a speech to the local news station about your company's new charity initiative.",
+                question: "Which Mintzberg role are you playing?",
+                options: ["Spokesperson", "Monitor", "Disseminator", "Negotiator"],
+                correct: "Spokesperson"
+            },
+            {
+                id: 6,
+                scenario: "A fire breaks out in the warehouse. You immediately take charge to handle the crisis.",
+                question: "Which Mintzberg role are you playing?",
+                options: ["Entrepreneur", "Disturbance Handler", "Resource Allocator", "Figurehead"],
+                correct: "Disturbance Handler"
+            },
+            {
+                id: 7,
+                scenario: "You attend the wedding of a long-time employee to show support.",
+                question: "Which Mintzberg role are you playing?",
+                options: ["Leader", "Liaison", "Figurehead", "Monitor"],
+                correct: "Figurehead"
+            },
+            {
+                id: 8,
+                scenario: "You decide to allocate 40% of the yearly budget to the R&D department.",
+                question: "Which Mintzberg role are you playing?",
+                options: ["Negotiator", "Resource Allocator", "Entrepreneur", "Disseminator"],
+                correct: "Resource Allocator"
+            },
+            {
+                id: 9,
+                scenario: "You scour the internet and industry reports to find new trends in the market.",
+                question: "Which Mintzberg role are you playing?",
+                options: ["Monitor", "Disseminator", "Spokesperson", "Liaison"],
+                correct: "Monitor"
+            }
+        ];
+
+        // --- COMPONENTS ---
+
+        function QuizGame() {
+            const [gameState, setGameState] = useState('welcome'); // welcome, playing, finished, leaderboard
+            const [playerName, setPlayerName] = useState('');
+            const [currentQIndex, setCurrentQIndex] = useState(0);
+            const [correctAnswers, setCorrectAnswers] = useState(0);
+            const [startTime, setStartTime] = useState(0);
+            const [endTime, setEndTime] = useState(0);
+            const [leaderboard, setLeaderboard] = useState([]);
+            const [userAuth, setUserAuth] = useState(null);
+            const [loading, setLoading] = useState(true);
+            
+            // New state for feedback
+            const [answerStatus, setAnswerStatus] = useState(null); // 'correct' | 'incorrect' | null
+            const [selectedOption, setSelectedOption] = useState(null);
+
+            // Auth
+            useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (e) {
+                        console.error("Auth error", e);
+                        setLoading(false);
+                    }
+                };
+                initAuth();
+                
+                return onAuthStateChanged(auth, (user) => {
+                    setUserAuth(user);
+                    setLoading(false);
+                });
+            }, []);
+
+            // Leaderboard Listener - Sort by accuracy desc, then time asc
+            useEffect(() => {
+                if (!userAuth) return;
+                
+                const collectionRef = collection(db, COLLECTION_NAME);
+                // Use single orderBy to avoid composite index requirement
+                // We'll sort by accuracy first, then time, in JavaScript
+                const q = query(collectionRef, orderBy('accuracy', 'desc'));
+
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const data = snapshot.docs.map(doc => ({ 
+                        id: doc.id, 
+                        ...doc.data() 
+                    }));
+                    
+                    // Sort by accuracy (desc), then by timeTaken (asc) as tie-breaker
+                    data.sort((a, b) => {
+                        if (a.accuracy !== b.accuracy) {
+                            return b.accuracy - a.accuracy; // Higher accuracy first
+                        }
+                        return (a.timeTaken || 0) - (b.timeTaken || 0); // Lower time first
+                    });
+                    
+                    setLeaderboard(data);
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                    // If error occurs, try a simpler query
+                    console.error("Error details:", error.code, error.message);
+                });
+                
+                return () => unsubscribe();
+            }, [userAuth]);
+
+            const startGame = () => {
+                if (!playerName.trim()) return alert("Please enter your name!");
+                setCorrectAnswers(0);
+                setCurrentQIndex(0);
+                setAnswerStatus(null);
+                setSelectedOption(null);
+                setStartTime(Date.now());
+                setGameState('playing');
+            };
+
+            const handleAnswer = (selected) => {
+                if (answerStatus) return; // Prevent double clicks
+
+                const currentQ = QUIZ_QUESTIONS[currentQIndex];
+                setSelectedOption(selected);
+
+                if (selected === currentQ.correct) {
+                    setAnswerStatus('correct');
+                    setCorrectAnswers(prev => prev + 1);
+                } else {
+                    setAnswerStatus('incorrect');
+                }
+            };
+
+            const handleNext = () => {
+                if (currentQIndex < QUIZ_QUESTIONS.length - 1) {
+                    setAnswerStatus(null);
+                    setSelectedOption(null);
+                    setCurrentQIndex(prev => prev + 1);
+                } else {
+                    finishGame();
+                }
+            };
+
+             const finishGame = async () => {
+                 const end = Date.now();
+                 setEndTime(end);
+                 const timeTaken = (end - startTime) / 1000;
+                 const accuracy = (correctAnswers / TOTAL_QUESTIONS) * 100;
+                 
+                 setGameState('finished');
+
+                 // Wait for authentication if not ready
+                 if (!userAuth) {
+                     console.warn("User not authenticated yet, waiting...");
+                     // Try to save anyway (userId will be missing but score will save)
+                 }
+
+                 try {
+                     const scoreData = {
+                         name: playerName,
+                         correctAnswers: correctAnswers,
+                         totalQuestions: TOTAL_QUESTIONS,
+                         accuracy: accuracy,
+                         timeTaken: timeTaken,
+                         createdAt: serverTimestamp()
+                     };
+                     
+                     // Only add userId if userAuth exists
+                     if (userAuth) {
+                         scoreData.userId = userAuth.uid;
+                     }
+                     
+                     await addDoc(collection(db, COLLECTION_NAME), scoreData);
+                 } catch (e) {
+                     console.error("Error saving score:", e);
+                     alert("Failed to save score: " + e.message);
+                 }
+             };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-xl">Loading...</div>
+                    </div>
+                );
+            }
+
+            return (
+                <div 
+                    className="min-h-screen flex items-center justify-center p-4 font-sans selection:bg-yellow-200"
+                    style={{
+                        backgroundColor: '#87CEEB',
+                        backgroundImage: `
+                            radial-gradient(circle at 10% 20%, rgb(220, 245, 255) 0%, transparent 20%),
+                            radial-gradient(circle at 80% 80%, rgb(220, 245, 255) 0%, transparent 25%),
+                            linear-gradient(135deg, #87CEEB 0%, #4facfe 100%)
+                        `
+                    }}
+                >
+                    <div className="w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border-4 border-white/50">
+                        
+                        {/* HEADER */}
+                        <div className="bg-blue-600 p-4 text-center">
+                            <h1 className="text-2xl font-bold text-white uppercase tracking-wider">MM2021 Manager Race</h1>
+                        </div>
+
+                        {/* SCREENS */}
+                        <div className="p-8 min-h-[400px] flex flex-col justify-center">
+                            
+                            {/* 1. WELCOME SCREEN */}
+                            {gameState === 'welcome' && (
+                                <div className="text-center space-y-6 slide-in">
+                                    <div className="bg-blue-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-blue-600 mb-4">
+                                        <Trophy />
+                                    </div>
+                                    <h2 className="text-3xl font-bold text-slate-800">Ready to Race?</h2>
+                                    <p className="text-slate-600">Test your knowledge of Management Functions & Roles.</p>
+                                    
+                                    <div className="max-w-xs mx-auto space-y-4 pt-4">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enter your Student Name" 
+                                            value={playerName}
+                                            onChange={(e) => setPlayerName(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && startGame()}
+                                            className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 outline-none text-center text-lg font-bold text-slate-700"
+                                        />
+                                        <button 
+                                            onClick={startGame}
+                                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-3 rounded-xl shadow-lg transform transition active:scale-95 text-xl flex items-center justify-center gap-2"
+                                        >
+                                            <Play size={20} /> START GAME
+                                        </button>
+                                    </div>
+                                    <div className="mt-8 pt-6 border-t border-slate-200">
+                                        <h3 className="text-slate-500 font-bold text-sm uppercase mb-3">Live Leaderboard</h3>
+                                        <div className="max-h-40 overflow-y-auto space-y-2">
+                                            {leaderboard.slice(0, 3).map((entry, i) => (
+                                                <div key={entry.id} className="flex justify-between items-center bg-white p-2 rounded-lg shadow-sm">
+                                                    <span className="font-bold text-slate-700">#{i+1} {entry.name}</span>
+                                                    <span className="text-blue-600 font-bold">{entry.accuracy?.toFixed(1)}%</span>
+                                                </div>
+                                            ))}
+                                            {leaderboard.length === 0 && <p className="text-sm text-slate-400">No scores yet. Be the first!</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 2. PLAYING SCREEN */}
+                            {gameState === 'playing' && (
+                                <div className="space-y-6 pop-in">
+                                    <div className="flex justify-between items-center text-slate-500 font-bold text-sm uppercase">
+                                        <span>Question {currentQIndex + 1} / {QUIZ_QUESTIONS.length}</span>
+                                        <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
+                                            Correct: {correctAnswers}/{currentQIndex + 1}
+                                        </span>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl border-2 border-slate-100 shadow-sm">
+                                        <h3 className="text-xl font-bold text-slate-800 mb-2">{QUIZ_QUESTIONS[currentQIndex].question}</h3>
+                                        <p className="text-lg text-slate-600 italic">"{QUIZ_QUESTIONS[currentQIndex].scenario}"</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {QUIZ_QUESTIONS[currentQIndex].options.map((opt) => {
+                                            const isSelected = selectedOption === opt;
+                                            const isCorrect = QUIZ_QUESTIONS[currentQIndex].correct === opt;
+                                            
+                                            // Determine classes based on state
+                                            let btnClass = "bg-white hover:bg-blue-50 border-slate-200 hover:border-blue-500 text-slate-700";
+                                            
+                                            if (answerStatus) {
+                                                if (isCorrect) {
+                                                    btnClass = "bg-green-100 border-green-500 text-green-700 shadow-sm";
+                                                } else if (isSelected && !isCorrect) {
+                                                    btnClass = "bg-red-100 border-red-500 text-red-700 opacity-60";
+                                                } else {
+                                                    btnClass = "bg-slate-50 border-slate-200 text-slate-400 opacity-50 cursor-not-allowed";
+                                                }
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={opt}
+                                                    onClick={() => handleAnswer(opt)}
+                                                    disabled={!!answerStatus}
+                                                    className={`border-2 font-bold py-4 px-6 rounded-xl text-left transition-all active:scale-98 ${btnClass}`}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        {opt}
+                                                        {answerStatus && isCorrect && <Check size={20} />}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Next Button Section */}
+                                    {answerStatus && (
+                                        <div className="pt-2 animate-[fadeIn_0.3s_ease-out]">
+                                            <button 
+                                                onClick={handleNext}
+                                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all"
+                                            >
+                                                {currentQIndex < QUIZ_QUESTIONS.length - 1 ? (
+                                                    <>Next Question <ArrowRight size={20} /></>
+                                                ) : (
+                                                    <>Finish Race <Trophy size={20} /></>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 3. FINISHED SCREEN */}
+                            {gameState === 'finished' && (
+                                <div className="text-center space-y-6 slide-in">
+                                    <div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-green-600">
+                                        <Check size={48} />
+                                    </div>
+                                    <h2 className="text-3xl font-bold text-slate-800">Quiz Complete!</h2>
+                                    <p className="text-slate-600">Thank you for participating, {playerName}.</p>
+                                    <div className="bg-blue-50 p-4 rounded-xl space-y-2">
+                                        <div className="text-2xl font-bold text-blue-600">
+                                            Accuracy: {((correctAnswers / TOTAL_QUESTIONS) * 100).toFixed(1)}%
+                                        </div>
+                                        <div className="text-lg text-slate-600">
+                                            {correctAnswers} / {TOTAL_QUESTIONS} correct
+                                        </div>
+                                        <div className="text-lg text-slate-600 flex items-center justify-center gap-2">
+                                            <Clock size={20} />
+                                            Time: {((endTime - startTime) / 1000).toFixed(1)}s
+                                        </div>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => setGameState('leaderboard')}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition"
+                                    >
+                                        View Leaderboard
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* 4. LEADERBOARD SCREEN */}
+                            {gameState === 'leaderboard' && (
+                                <div className="space-y-4 slide-in h-full">
+                                    <h2 className="text-2xl font-bold text-slate-800 text-center mb-4">🏆 Class Standings</h2>
+                                    
+                                    <div className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200 max-h-[300px] overflow-y-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-200 text-slate-600 uppercase text-xs sticky top-0">
+                                                <tr>
+                                                    <th className="p-3">Rank</th>
+                                                    <th className="p-3">Name</th>
+                                                    <th className="p-3 text-right">Accuracy</th>
+                                                    <th className="p-3 text-right">Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200">
+                                                {leaderboard.map((entry, i) => (
+                                                    <tr key={entry.id} className={entry.name === playerName ? "bg-yellow-50 font-bold" : "bg-white"}>
+                                                        <td className="p-3 font-bold text-slate-500">#{i+1}</td>
+                                                        <td className="p-3 text-slate-800">{entry.name}</td>
+                                                        <td className="p-3 text-right font-bold text-blue-600">{entry.accuracy?.toFixed(1)}%</td>
+                                                        <td className="p-3 text-right text-slate-500 text-sm">{entry.timeTaken?.toFixed(1)}s</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        {leaderboard.length === 0 && (
+                                            <div className="p-8 text-center text-slate-400">
+                                                No scores yet. Be the first to play!
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => {
+                                            setGameState('welcome');
+                                            setPlayerName('');
+                                        }}
+                                        className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl mt-4"
+                                    >
+                                        Play Again
+                                    </button>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<QuizGame />);
+    </script>
+</body>
+</html>
