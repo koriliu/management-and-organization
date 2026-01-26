@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Challenge Match Game</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #854d0e; border-radius: 10px; }
+        @keyframes bounce-short {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        .animate-bounce-short {
+          animation: bounce-short 0.4s ease-in-out infinite;
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(-2%); }
+          50% { transform: translateY(0); }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            setDoc, 
+            onSnapshot, 
+            updateDoc, 
+            addDoc, 
+            query,
+            getDocs,
+            deleteDoc
+        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+
+        // --- ICON COMPONENTS (replacing lucide-react) ---
+        const Users = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        );
+        const Trophy = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        );
+        const Timer = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+        );
+        const Vote = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 12 2 2 4-4"/><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.999.398-.999.95v8a1 1 0 0 0 1 1z"/><path d="M21.21 15.89A10 10 0 1 1 8 2.04"/></svg>
+        );
+        const UserPlus = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        );
+        const Crown = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
+        );
+        const ChevronRight = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6"/></svg>
+        );
+        const RefreshCw = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        );
+        const AlertCircle = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        );
+        const BarChart3 = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"/><path d="M18 7v11"/><path d="M13 12v6"/><path d="M8 15v3"/></svg>
+        );
+        const Medal = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 9 8l-2 4"/><path d="M13 12l2-4 2 4"/><path d="M12 2v5.5"/><path d="M6 18a6 6 0 0 0 12 0"/></svg>
+        );
+        const Lock = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        );
+        const ShieldCheck = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+        );
+        const Sparkles = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+        );
+        const Megaphone = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+        );
+        const Music = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        );
+        const Star = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        );
+        const PartyPopper = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5.8 11.3 2 22l10.7-3.8"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="M22 2l-5 5"/><path d="M15 9l-3-3"/><path d="M20.5 8.5 19 7"/><path d="M20.5 13.5 19 15"/><path d="m8 14 1.5-1.5"/></svg>
+        );
+        const Volume2 = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        );
+        const VolumeX = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        );
+
+        // --- FIREBASE CONFIGURATION ---
+        // REPLACE THIS WITH YOUR FIREBASE CONFIG FROM FIREBASE CONSOLE
+        const firebaseConfig = {
+            apiKey: "AIzaSyApNwLV9aUJeTs8OZtjNFRgSC0cBest_pE",
+            authDomain: "challenge-match-game.firebaseapp.com",
+            projectId: "challenge-match-game",
+            storageBucket: "challenge-match-game.firebasestorage.app",
+            messagingSenderId: "1084267542819",
+            appId: "1:1084267542819:web:af553f30013566914bb496"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'challenge-match-v1';
+
+        // Allowed Student IDs for voter registration
+        const ALLOWED_STUDENT_IDS = new Set([
+          '21101698D', '21110815D', '21111842D', '21112275D', '22036311D', '22096459D', '22097074D', '22097449D', '22097661D', '22098971D',
+          '22101934D', '22103166D', '22106845D', '23020129D', '23021538D', '23030738D', '23031408D', '23031864D', '23072516D', '23073437D',
+          '23078509D', '23080208D', '23082255D', '23087242D', '23089215D', '23091402D', '23092291D', '23093083D', '23093214D', '23093329D',
+          '23094303D', '23096009D', '23096182D', '23096755D', '23096916D', '23096939D', '23100105D', '23103158D', '23107217D', '23110622D',
+          '23115167D', '23116889D', '23117147D', '23117536D', '24015245D', '24015947D', '24015977D', '24016486D', '24016944D', '24019173D',
+          '24019327D', '24019426D', '24021772D', '24028969D', '24032754D', '24034308D', '24034863D', '24074479D', '24074684D', '24074769D',
+          '24076885D', '24079749D', '24081577D', '24083663D', '24084036D', '24085606D', '24090296D', '24092414D', '24093082D', '24093592D',
+          '24094477D', '24095734D', '24100219D', '24103599D', '24108174D', '24114222D', '24115548D', '24115677D', '24115967D', '24115981D',
+          '24117406D', '24118815D', '24121571D', '24125943D', '24128577D', '24128996D', '24131602D', '24134809D', '24136437D', '24138424D',
+          '25029928D', '25031047D', '25032493D', '25032838D', '25033119D', '25033285D', '25033743D', '25067822D', '25068681D', '25068828D',
+          '25069061D', '25069634D', '25069671D', '25069703D', '25069818D', '25069924D', '25070725D', '25071616D', '25073511D', '25073693D',
+          '25074897D', '25075155D', '25075422D', '25076435D', '25076564D', '25077547D', '25077874D', '25078445D', '25078795D', '25079969D',
+          '25080273D', '25082209D', '25082308D', '25082962D', '25084302D', '25084843D', '25086648D', '25088025D', '25088573D', '25089731D',
+          '25090691D', '25091377D', '25091391D', '25091971D', '25092024D', '25092664D', '25096868D', '25096898D', '25100575D', '25103971D',
+          '25106614D', '25107109D', '25126246D', '25130947D', '25131143D', '25131739D', '25131997D', '25132637D', '25133109D', '25133123D',
+          '25134143D', '25140039X', '25140237X', '25140373X', '25141227X', '25141814X', '25141844X', '25141936X', '25141966X', '25141996X',
+          '25142056X', '25142162X'
+        ]);
+
+        const PHASES = {
+          REGISTRATION: 'registration',
+          VOTER_REGISTRATION: 'voter_registration',
+          VOLUNTEERING: 'volunteering',
+          PRESENTING: 'presenting',
+          VOTING: 'voting',
+          COMPARING: 'comparing',
+          CHALLENGE_REGISTRATION: 'challenge_registration',
+          FINAL_WINNER: 'final_winner'
+        };
+
+        const PRESENTATION_TIME = 5 * 60; 
+        const VOTING_TIME = 60; 
+
+        // --- Advanced Festive Audio Engine (Web Audio API) ---
+        const useFestiveAudio = (phase, isEnabled) => {
+          const audioCtx = useRef(null);
+          const loopInterval = useRef(null);
+          const masterGain = useRef(null);
+
+          const stopAudio = () => {
+            if (loopInterval.current) clearInterval(loopInterval.current);
+            if (audioCtx.current) {
+              audioCtx.current.close();
+              audioCtx.current = null;
+            }
+          };
+
+          const playSynthNote = ({ freq, type = 'sine', attack = 0.05, decay = 0.2, sustain = 0.5, release = 0.3, volume = 0.1 }) => {
+            if (!audioCtx.current || audioCtx.current.state === 'suspended') return;
+            
+            const osc = audioCtx.current.createOscillator();
+            const gain = audioCtx.current.createGain();
+            const filter = audioCtx.current.createBiquadFilter();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.current.currentTime);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(freq * 3, audioCtx.current.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(freq, audioCtx.current.currentTime + decay);
+
+            gain.gain.setValueAtTime(0, audioCtx.current.currentTime);
+            gain.gain.linearRampToValueAtTime(volume, audioCtx.current.currentTime + attack);
+            gain.gain.linearRampToValueAtTime(volume * sustain, audioCtx.current.currentTime + attack + decay);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.current.currentTime + attack + decay + release);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain.current);
+            
+            osc.start();
+            osc.stop(audioCtx.current.currentTime + attack + decay + release);
+          };
+
+          useEffect(() => {
+            if (!isEnabled) {
+              stopAudio();
+              return;
+            }
+
+            if (!audioCtx.current) {
+              audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+              masterGain.current = audioCtx.current.createGain();
+              masterGain.current.gain.setValueAtTime(0.5, audioCtx.current.currentTime);
+              masterGain.current.connect(audioCtx.current.destination);
+            }
+
+            if (loopInterval.current) clearInterval(loopInterval.current);
+
+            let step = 0;
+            const bpm = 140;
+            const stepDuration = (60 / bpm) / 2; // Eighth notes
+
+            if (phase === PHASES.REGISTRATION || phase === PHASES.VOTER_REGISTRATION || phase === PHASES.CHALLENGE_REGISTRATION) {
+              // Dynamic Festive Melody (16-step pattern)
+              const melody = [440, 0, 493.88, 523.25, 0, 587.33, 659.25, 0, 392, 440, 349.23, 392, 0, 329.63, 261.63, 0];
+              const bass = [220, 220, 261.63, 196, 220, 220, 174.61, 196];
+
+              loopInterval.current = setInterval(() => {
+                // Play Melody
+                const mFreq = melody[step % 16];
+                if (mFreq > 0) playSynthNote({ freq: mFreq, type: 'triangle', volume: 0.05, decay: 0.1 });
+                
+                // Play Bass (Quarter notes)
+                if (step % 2 === 0) {
+                  const bFreq = bass[(step / 2) % 8];
+                  playSynthNote({ freq: bFreq, type: 'sine', volume: 0.1, decay: 0.4 });
+                }
+                
+                // Soft Percussion
+                if (step % 4 === 0) playSynthNote({ freq: 80, type: 'sine', volume: 0.15, attack: 0.01, decay: 0.1 });
+                
+                step++;
+              }, stepDuration * 1000);
+
+            } else if (phase === PHASES.VOTING) {
+              // High-speed tension beat (Non-repeating variation)
+              loopInterval.current = setInterval(() => {
+                const isDownbeat = step % 8 === 0;
+                const isUpbeat = step % 4 === 0;
+                
+                // Tense Pulse
+                const baseFreq = isDownbeat ? 110 : 164.81;
+                playSynthNote({ freq: baseFreq, type: 'sawtooth', volume: 0.04, attack: 0.01, decay: 0.05 });
+                
+                // Random syncopated "ticks"
+                if (Math.random() > 0.6) {
+                  playSynthNote({ freq: 880 + (Math.random() * 440), type: 'square', volume: 0.02, attack: 0.001, decay: 0.02 });
+                }
+                
+                // Accelerating kick feel
+                if (isUpbeat) playSynthNote({ freq: 60, type: 'sine', volume: 0.12, decay: 0.1 });
+
+                step++;
+              }, (stepDuration * 0.8) * 1000); // Slightly faster
+
+            } else if (phase === PHASES.FINAL_WINNER) {
+              // Shimmering Arpeggios & Chords
+              const chords = [
+                [523.25, 659.25, 783.99], // C Major
+                [587.33, 739.99, 880.00], // D Major
+                [349.23, 440.00, 523.25], // F Major
+                [392.00, 493.88, 587.33]  // G Major
+              ];
+
+              loopInterval.current = setInterval(() => {
+                const chordIdx = Math.floor(step / 16) % chords.length;
+                const chord = chords[chordIdx];
+                
+                // Play chordal wash
+                if (step % 16 === 0) {
+                  chord.forEach(f => playSynthNote({ freq: f / 2, type: 'sine', volume: 0.05, attack: 0.5, decay: 2, sustain: 1 }));
+                }
+
+                // Fast arpeggio
+                const arpNote = chord[step % 3] * (step % 6 === 0 ? 2 : 1);
+                playSynthNote({ freq: arpNote, type: 'triangle', volume: 0.03, attack: 0.05, decay: 0.1 });
+
+                // High sparkles
+                if (Math.random() > 0.8) {
+                  playSynthNote({ freq: 1500 + Math.random() * 1000, type: 'sine', volume: 0.01, attack: 0.1, decay: 0.5 });
+                }
+
+                step++;
+              }, 150);
+            }
+
+            return () => {
+              if (loopInterval.current) clearInterval(loopInterval.current);
+            };
+          }, [phase, isEnabled]);
+
+          return { stopAudio };
+        };
+
+        const FestiveDrum = ({ className, onClick, isPulsing }) => (
+          <div 
+            onClick={onClick}
+            className={`relative cursor-pointer transition-transform hover:scale-110 active:scale-95 ${className} ${isPulsing ? 'animate-bounce-short' : ''}`}
+          >
+            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
+              <defs>
+                <radialGradient id="drumHead" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                  <stop offset="0%" stopColor="#fef08a" />
+                  <stop offset="100%" stopColor="#eab308" />
+                </radialGradient>
+              </defs>
+              <ellipse cx="50" cy="40" rx="42" ry="18" fill="url(#drumHead)" stroke="#854d0e" strokeWidth="2" />
+              <path d="M8 40 L8 75 Q50 90 92 75 L92 40 Q50 55 8 40" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
+              <path d="M8 55 Q50 70 92 55" fill="none" stroke="#facc15" strokeWidth="1" strokeDasharray="2,2" />
+              {[...Array(14)].map((_, i) => (
+                <circle key={i} cx={50 + 40 * Math.cos(i * Math.PI / 7)} cy={45 + 12 * Math.sin(i * Math.PI / 7)} r="1.5" fill="#facc15" />
+              ))}
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+               <Music className="text-red-900 opacity-20" size={32} />
+            </div>
+          </div>
+        );
+
+        function App() {
+          const [user, setUser] = useState(null);
+          const [gameState, setGameState] = useState(null);
+          const [firms, setFirms] = useState([]);
+          const [votes, setVotes] = useState([]);
+          const [voters, setVoters] = useState([]);
+          const [myFirm, setMyFirm] = useState(null);
+          const [myVoter, setMyVoter] = useState(null);
+          const [challenges, setChallenges] = useState([]);
+          const [loading, setLoading] = useState(true);
+          const [error, setError] = useState(null);
+          const [audioEnabled, setAudioEnabled] = useState(false);
+
+          // Admin Controls
+          const [showAdmin, setShowAdmin] = useState(false);
+          const [passcodeInput, setPasscodeInput] = useState('');
+          const [isAdmin, setIsAdmin] = useState(false);
+          const ADMIN_PASSCODE = '1224';
+
+          // Registration Form State
+          const [regFirmName, setRegFirmName] = useState('');
+          const [regMembers, setRegMembers] = useState('');
+          
+          // Voter Registration Form State
+          const [voterName, setVoterName] = useState('');
+          const [voterStudentId, setVoterStudentId] = useState('');
+
+          // Audio Hook
+          useFestiveAudio(gameState?.phase, audioEnabled);
+
+          useEffect(() => {
+            const initAuth = async () => {
+              try {
+                await signInAnonymously(auth);
+              } catch (err) {
+                setError("Connection failed.");
+              }
+            };
+            initAuth();
+            const unsubscribe = onAuthStateChanged(auth, (u) => {
+              setUser(u);
+              setLoading(false);
+            });
+            return () => unsubscribe();
+          }, []);
+
+          const getGameDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'game', 'state');
+
+          useEffect(() => {
+            if (!user) return;
+
+            const unsubGame = onSnapshot(getGameDocRef(), (docSnap) => {
+              if (docSnap.exists()) {
+                setGameState(docSnap.data());
+              } else {
+                const initialState = {
+                  phase: PHASES.REGISTRATION,
+                  currentPresenterId: null,
+                  currentChampionId: null,
+                  championScore: 0,
+                  challengerScore: 0,
+                  timerEnd: null,
+                  challengeStartTime: null,
+                  history: []
+                };
+                setDoc(getGameDocRef(), initialState);
+                setGameState(initialState);
+              }
+            }, (err) => setError("Sync error: " + err.message));
+
+            const firmsCol = collection(db, 'artifacts', appId, 'public', 'data', 'firms');
+            const unsubFirms = onSnapshot(firmsCol, (snapshot) => {
+              const firmData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+              setFirms(firmData);
+              const mine = firmData.find(f => f.ownerId === user.uid);
+              setMyFirm(mine);
+            });
+
+            const votesCol = collection(db, 'artifacts', appId, 'public', 'data', 'votes');
+            const unsubVotes = onSnapshot(votesCol, (snapshot) => {
+              setVotes(snapshot.docs.map(d => d.data()));
+            });
+
+            const votersCol = collection(db, 'artifacts', appId, 'public', 'data', 'voters');
+            const unsubVoters = onSnapshot(votersCol, (snapshot) => {
+              const voterData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+              setVoters(voterData);
+              const mine = voterData.find(v => v.userId === user.uid);
+              setMyVoter(mine);
+            });
+
+            const challengesCol = collection(db, 'artifacts', appId, 'public', 'data', 'challenges');
+            const unsubChallenges = onSnapshot(challengesCol, (snapshot) => {
+              const challengeData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+              setChallenges(challengeData.sort((a, b) => a.timestamp - b.timestamp));
+            });
+
+            return () => { unsubGame(); unsubFirms(); unsubVotes(); unsubVoters(); unsubChallenges(); };
+          }, [user]);
+
+          const updateGameState = async (updates) => {
+            try {
+              await updateDoc(getGameDocRef(), updates);
+            } catch (err) {
+              setError("Update failed.");
+            }
+          };
+
+          const checkPasscode = () => {
+            if (passcodeInput === ADMIN_PASSCODE) {
+              setIsAdmin(true);
+              setPasscodeInput('');
+            } else {
+              setError("Incorrect Passcode.");
+            }
+          };
+
+          const registerFirm = async (e) => {
+            e.preventDefault();
+            if (!regFirmName || !regMembers || !user) return;
+            // Allow registration during REGISTRATION and CHALLENGE_REGISTRATION phases
+            if (gameState?.phase !== PHASES.REGISTRATION && gameState?.phase !== PHASES.CHALLENGE_REGISTRATION) {
+              setError("Registration is not open at this time.");
+              return;
+            }
+            try {
+              await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'firms', user.uid), {
+                name: regFirmName,
+                members: regMembers.split(',').map(m => m.trim()),
+                ownerId: user.uid,
+                hasPresented: false,
+                isVolunteering: false,
+                registeredAt: Date.now()
+              });
+              setRegFirmName('');
+              setRegMembers('');
+              
+              // Update all voter tickets when new team is added
+              const newTicketCount = Math.ceil((firms.length + 1) / 2);
+              try {
+                const votersCol = collection(db, 'artifacts', appId, 'public', 'data', 'voters');
+                const votersSnapshot = await getDocs(votersCol);
+                const updatePromises = votersSnapshot.docs.map(d => 
+                  updateDoc(d.ref, { 
+                    remainingTickets: newTicketCount, 
+                    totalTickets: newTicketCount 
+                  })
+                );
+                await Promise.all(updatePromises);
+              } catch (err) {
+                console.error("Error updating voter tickets:", err);
+              }
+            } catch (err) {
+              setError("Registration failed.");
+            }
+          };
+
+          const toggleVolunteerStatus = async () => {
+            if (!myFirm || !user) return;
+            try {
+              await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'firms', user.uid), {
+                isVolunteering: !myFirm.isVolunteering
+              });
+            } catch (err) {
+              setError("Failed to update volunteer status.");
+            }
+          };
+
+          const submitVote = async () => {
+            if (!user || !gameState?.currentPresenterId || !myVoter) return;
+            
+            // Check if voter has remaining tickets
+            if (myVoter.remainingTickets <= 0) {
+              setError("You have no tickets remaining.");
+              return;
+            }
+            
+            // Check if already voted for this presenter
+            const existingVote = votes.find(v => v.voterId === user.uid && v.presenterId === gameState.currentPresenterId);
+            if (existingVote) {
+              setError("You have already voted for this presenter.");
+              return;
+            }
+            
+            try {
+              // Add vote
+              await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'votes'), {
+                voterId: user.uid,
+                presenterId: gameState.currentPresenterId,
+                timestamp: Date.now()
+              });
+              
+              // Decrement remaining tickets
+              await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'voters', user.uid), {
+                remainingTickets: myVoter.remainingTickets - 1
+              });
+            } catch (err) {
+              setError("Vote submission failed.");
+            }
+          };
+
+          const calculateTicketsPerVoter = () => {
+            return Math.ceil(firms.length / 2);
+          };
+
+          const advanceToVoterRegistration = () => {
+            if (firms.length === 0) {
+              setError("At least one firm must register first.");
+              return;
+            }
+            updateGameState({ phase: PHASES.VOTER_REGISTRATION });
+          };
+
+          const advanceToVolunteering = () => {
+            if (voters.length === 0) {
+              setError("At least one voter must register first.");
+              return;
+            }
+            updateGameState({ phase: PHASES.VOLUNTEERING });
+          };
+
+          const registerVoter = async (e) => {
+            e.preventDefault();
+            if (!voterName || !voterStudentId || !user) return;
+            
+            const trimmedStudentId = voterStudentId.trim().toUpperCase();
+            
+            // Check if student ID is in the allowed list
+            if (!ALLOWED_STUDENT_IDS.has(trimmedStudentId)) {
+              setError("This student ID is not authorized to register as a voter.");
+              return;
+            }
+            
+            // Check if student ID already exists
+            const existingVoter = voters.find(v => v.studentId.toUpperCase() === trimmedStudentId);
+            if (existingVoter) {
+              setError("This student ID is already registered.");
+              return;
+            }
+
+            const tickets = calculateTicketsPerVoter();
+            try {
+              await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'voters', user.uid), {
+                name: voterName.trim(),
+                studentId: trimmedStudentId,
+                userId: user.uid,
+                totalTickets: tickets,
+                remainingTickets: tickets,
+                registeredAt: Date.now()
+              });
+              setVoterName('');
+              setVoterStudentId('');
+            } catch (err) {
+              setError("Voter registration failed.");
+            }
+          };
+          
+          const pickFirstPresenter = async () => {
+            if (firms.length === 0) {
+              setError("No firms registered yet.");
+              return;
+            }
+            
+            const volunteers = firms.filter(f => f.isVolunteering);
+            let chosen;
+            
+            if (volunteers.length > 0) {
+              // If there are volunteers, randomly select from volunteers
+              chosen = volunteers[Math.floor(Math.random() * volunteers.length)];
+            } else {
+              // If no volunteers, randomly select from all registered firms
+              chosen = firms[Math.floor(Math.random() * firms.length)];
+            }
+            
+            await updateGameState({
+              phase: PHASES.PRESENTING,
+              currentPresenterId: chosen.id,
+              timerEnd: null // Don't start timer yet - wait for organizer
+            });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'firms', chosen.id), {
+              hasPresented: true,
+              isVolunteering: false
+            });
+          };
+
+          const startVoting = async () => {
+            await updateGameState({
+              phase: PHASES.VOTING,
+              timerEnd: Date.now() + VOTING_TIME * 1000
+            });
+          };
+
+          const finalizeRound = async () => {
+            const currentScore = votes.length;
+            const presenter = firms.find(f => f.id === gameState?.currentPresenterId);
+            if (!presenter) return;
+            
+            const newHistoryEntry = { firmName: presenter.name, score: currentScore, timestamp: Date.now() };
+            const updatedHistory = [...(gameState?.history || []), newHistoryEntry];
+            
+            if (!gameState?.currentChampionId) {
+              await updateGameState({
+                phase: PHASES.COMPARING,
+                currentChampionId: gameState.currentPresenterId,
+                championScore: currentScore,
+                currentPresenterId: null,
+                timerEnd: null,
+                history: updatedHistory
+              });
+            } else {
+              await updateGameState({
+                phase: PHASES.COMPARING,
+                challengerScore: currentScore,
+                history: updatedHistory
+              });
+            }
+          };
+
+          const nextChallenge = async () => {
+            let newChampionId = gameState?.currentChampionId;
+            let newChampionScore = gameState?.championScore;
+            if (gameState?.challengerScore > gameState?.championScore) {
+              newChampionId = gameState.currentPresenterId;
+              newChampionScore = gameState.challengerScore;
+            }
+            
+            // Clear votes for next round
+            try {
+              const votesCol = collection(db, 'artifacts', appId, 'public', 'data', 'votes');
+              const votesSnapshot = await getDocs(votesCol);
+              const deletePromises = votesSnapshot.docs.map(d => deleteDoc(d.ref));
+              await Promise.all(deletePromises);
+            } catch (err) {
+              console.error("Error clearing votes:", err);
+            }
+            
+            // Clear previous challenges
+            try {
+              const challengesCol = collection(db, 'artifacts', appId, 'public', 'data', 'challenges');
+              const challengesSnapshot = await getDocs(challengesCol);
+              const deletePromises = challengesSnapshot.docs.map(d => deleteDoc(d.ref));
+              await Promise.all(deletePromises);
+            } catch (err) {
+              console.error("Error clearing challenges:", err);
+            }
+            
+            const available = firms.filter(f => !f.hasPresented);
+            if (available.length === 0) {
+              await updateGameState({ phase: PHASES.FINAL_WINNER, currentChampionId: newChampionId, championScore: newChampionScore });
+              return;
+            }
+            
+            // Go to challenge registration phase instead of directly to presenting
+            await updateGameState({
+              phase: PHASES.CHALLENGE_REGISTRATION,
+              currentChampionId: newChampionId,
+              championScore: newChampionScore,
+              challengerScore: 0,
+              challengeStartTime: null // Reset challenge start time
+            });
+          };
+
+          const clickChallenge = async () => {
+            if (!myFirm || !user || gameState?.phase !== PHASES.CHALLENGE_REGISTRATION) return;
+            if (!gameState?.challengeStartTime) {
+              setError("Wait for organizer to announce start!");
+              return;
+            }
+            if (myFirm.hasPresented) {
+              setError("Your team has already presented.");
+              return;
+            }
+            // Check if already challenged
+            const existingChallenge = challenges.find(c => c.firmId === user.uid);
+            if (existingChallenge) {
+              setError("You have already clicked Challenge!");
+              return;
+            }
+            try {
+              await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'challenges'), {
+                firmId: user.uid,
+                firmName: myFirm.name,
+                timestamp: Date.now() // Store actual timestamp
+              });
+            } catch (err) {
+              setError("Failed to register challenge.");
+            }
+          };
+
+          const announceChallengeStart = async () => {
+            await updateGameState({
+              challengeStartTime: Date.now()
+            });
+          };
+
+          const startNextRound = async (challengerId) => {
+            if (!challengerId) return;
+            const challenger = firms.find(f => f.id === challengerId);
+            if (!challenger) return;
+            
+            await updateGameState({
+              phase: PHASES.PRESENTING,
+              currentPresenterId: challengerId,
+              timerEnd: null, // Don't start timer yet - wait for organizer
+              challengeStartTime: null // Reset challenge start time
+            });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'firms', challengerId), { hasPresented: true });
+            
+            // Clear challenges
+            try {
+              const challengesCol = collection(db, 'artifacts', appId, 'public', 'data', 'challenges');
+              const challengesSnapshot = await getDocs(challengesCol);
+              const deletePromises = challengesSnapshot.docs.map(d => deleteDoc(d.ref));
+              await Promise.all(deletePromises);
+            } catch (err) {
+              console.error("Error clearing challenges:", err);
+            }
+          };
+
+          const startPresentationTimer = async () => {
+            await updateGameState({
+              timerEnd: Date.now() + PRESENTATION_TIME * 1000
+            });
+          };
+
+          const endGame = async () => {
+            let finalChampionId = gameState?.currentChampionId;
+            let finalChampionScore = gameState?.championScore;
+            // If there's a current presenter with a higher score, use that
+            if (gameState?.currentPresenterId && gameState?.challengerScore > gameState?.championScore) {
+              finalChampionId = gameState.currentPresenterId;
+              finalChampionScore = gameState.challengerScore;
+            }
+            await updateGameState({
+              phase: PHASES.FINAL_WINNER,
+              currentChampionId: finalChampionId,
+              championScore: finalChampionScore
+            });
+          };
+
+          const resetGame = async () => {
+            // Clear all votes
+            try {
+              const votesCol = collection(db, 'artifacts', appId, 'public', 'data', 'votes');
+              const votesSnapshot = await getDocs(votesCol);
+              const deletePromises = votesSnapshot.docs.map(d => deleteDoc(d.ref));
+              await Promise.all(deletePromises);
+            } catch (err) {
+              console.error("Error clearing votes:", err);
+            }
+            
+            // Clear all challenges
+            try {
+              const challengesCol = collection(db, 'artifacts', appId, 'public', 'data', 'challenges');
+              const challengesSnapshot = await getDocs(challengesCol);
+              const deletePromises = challengesSnapshot.docs.map(d => deleteDoc(d.ref));
+              await Promise.all(deletePromises);
+            } catch (err) {
+              console.error("Error clearing challenges:", err);
+            }
+            
+            // Reset all firms
+            try {
+              const firmsCol = collection(db, 'artifacts', appId, 'public', 'data', 'firms');
+              const firmsSnapshot = await getDocs(firmsCol);
+              const updatePromises = firmsSnapshot.docs.map(d => 
+                updateDoc(d.ref, { hasPresented: false, isVolunteering: false })
+              );
+              await Promise.all(updatePromises);
+            } catch (err) {
+              console.error("Error resetting firms:", err);
+            }
+            
+            // Reset all voters' tickets
+            try {
+              const votersCol = collection(db, 'artifacts', appId, 'public', 'data', 'voters');
+              const votersSnapshot = await getDocs(votersCol);
+              const tickets = calculateTicketsPerVoter();
+              const updatePromises = votersSnapshot.docs.map(d => 
+                updateDoc(d.ref, { remainingTickets: tickets, totalTickets: tickets })
+              );
+              await Promise.all(updatePromises);
+            } catch (err) {
+              console.error("Error resetting voters:", err);
+            }
+            
+            await updateGameState({
+              phase: PHASES.REGISTRATION,
+              currentPresenterId: null,
+              currentChampionId: null,
+              championScore: 0,
+              challengerScore: 0,
+              timerEnd: null,
+              challengeStartTime: null,
+              history: []
+            });
+          };
+
+          const [timeLeft, setTimeLeft] = useState(0);
+          useEffect(() => {
+            if (!gameState?.timerEnd) return;
+            const interval = setInterval(() => {
+              const remaining = Math.max(0, Math.floor((gameState.timerEnd - Date.now()) / 1000));
+              setTimeLeft(remaining);
+            }, 100);
+            return () => clearInterval(interval);
+          }, [gameState?.timerEnd]);
+
+          const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+
+          if (loading) return (
+            <div className="flex items-center justify-center h-screen bg-red-900">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400"></div>
+            </div>
+          );
+
+          const currentPresenter = firms.find(f => f.id === gameState?.currentPresenterId);
+          const currentChampion = firms.find(f => f.id === gameState?.currentChampionId);
+          const sortedHistory = gameState?.history ? [...gameState.history].sort((a, b) => b.score - a.score) : [];
+
+          return (
+            <div className="min-h-screen bg-red-950 text-yellow-50 font-sans p-4 md:p-8 selection:bg-yellow-400 selection:text-red-900">
+              <div className="max-w-4xl mx-auto">
+                
+                {/* Festive Header */}
+                <header className="relative border-b-4 border-yellow-500 pb-8 mb-8 text-center bg-red-900 p-8 rounded-3xl shadow-2xl overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none flex flex-wrap gap-12 p-4">
+                     {[...Array(20)].map((_, i) => <Star key={i} size={40} />)}
+                  </div>
+                  
+                  <div className="absolute top-4 right-4 z-20">
+                     <button 
+                        onClick={() => setAudioEnabled(!audioEnabled)}
+                        className="p-3 bg-red-950/50 rounded-full text-yellow-500 hover:bg-yellow-500 hover:text-red-900 transition-all border border-yellow-500/30 shadow-lg"
+                        title={audioEnabled ? "Mute Music" : "Play Music"}
+                     >
+                        {audioEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                     </button>
+                  </div>
+
+                  <h1 className="text-4xl md:text-5xl font-black text-yellow-400 tracking-tight flex items-center justify-center gap-4 mt-4">
+                    <Sparkles className="text-yellow-500" />
+                    CHALLENGE MATCH
+                    <Sparkles className="text-yellow-500" />
+                  </h1>
+                  <p className="text-yellow-600 font-bold mt-2 uppercase tracking-widest text-sm">
+                    Pitch Your Company Culture
+                  </p>
+                  
+                  <div className="mt-4 flex items-center justify-center gap-4 flex-wrap">
+                    {gameState?.phase && (
+                      <div className="inline-block px-6 py-1 bg-yellow-500 text-red-900 rounded-full font-black text-xs uppercase tracking-widest border-2 border-yellow-300 shadow-lg">
+                        Match Status: {gameState.phase.replace('_', ' ')}
+                      </div>
+                    )}
+                    <div className="inline-block px-4 py-1 bg-yellow-400/20 border border-yellow-500/50 rounded-full">
+                      <span className="text-yellow-400 text-xs font-black uppercase tracking-wider">
+                        {firms.length} Team{firms.length !== 1 ? 's' : ''} Registered
+                      </span>
+                    </div>
+                  </div>
+                </header>
+
+                {error && !(gameState?.phase === PHASES.FINAL_WINNER && error.includes("no tickets remaining")) && (
+                  <div className="mb-6 p-4 bg-yellow-400 text-red-900 rounded-xl flex items-center gap-2 font-bold shadow-lg">
+                    <AlertCircle size={20} />
+                    <span className="flex-1">{error}</span>
+                    <button onClick={() => setError(null)}>✕</button>
+                  </div>
+                )}
+
+                {/* Phase Components */}
+                {gameState?.phase === PHASES.REGISTRATION && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <section className="bg-red-900 p-8 rounded-3xl border-2 border-yellow-600 shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10"><UserPlus size={80} /></div>
+                      <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-yellow-400 uppercase">
+                        Register Your Firm
+                      </h2>
+                      {myFirm ? (
+                        <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl">
+                          <p className="text-yellow-400 font-black text-2xl mb-1">{myFirm.name}</p>
+                          <p className="text-sm text-yellow-600 font-bold uppercase tracking-tighter">Team: {myFirm.members.join(', ')}</p>
+                        </div>
+                      ) : (
+                        <form onSubmit={registerFirm} className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-black text-yellow-600 uppercase mb-1 ml-1">Firm Name</label>
+                            <input 
+                              type="text" 
+                              value={regFirmName} 
+                              onChange={e => setRegFirmName(e.target.value)}
+                              className="w-full px-4 py-3 bg-red-950 rounded-xl border-2 border-yellow-900/50 focus:border-yellow-400 text-yellow-50 outline-none transition-all placeholder:text-red-800"
+                              placeholder="e.g. Innovate Solutions"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-black text-yellow-600 uppercase mb-1 ml-1">Student Names</label>
+                            <textarea 
+                              value={regMembers} 
+                              onChange={e => setRegMembers(e.target.value)}
+                              className="w-full px-4 py-3 bg-red-950 rounded-xl border-2 border-yellow-900/50 focus:border-yellow-400 text-yellow-50 outline-none h-28 transition-all placeholder:text-red-800"
+                              placeholder="Jane Doe, John Smith, Emily Chen..."
+                              required
+                            />
+                          </div>
+                          <button type="submit" className="w-full bg-yellow-500 text-red-900 py-4 rounded-xl font-black hover:bg-yellow-400 transition shadow-xl transform active:scale-95 uppercase tracking-widest mt-2">
+                            Enter Challenge
+                          </button>
+                        </form>
+                      )}
+                    </section>
+
+                    <section className="bg-red-900 p-8 rounded-3xl border-2 border-yellow-600 shadow-xl">
+                      <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-yellow-400 uppercase">
+                        Participants ({firms.length})
+                      </h2>
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        {firms.map(f => (
+                          <div key={f.id} className="flex justify-between items-center p-4 bg-red-800/40 border border-yellow-500/20 rounded-xl group hover:bg-red-800 transition shadow-sm">
+                            <div>
+                              <span className="font-black text-yellow-50 group-hover:text-yellow-400 block">{f.name}</span>
+                              <span className="text-[10px] text-yellow-700 font-black uppercase tracking-widest">{f.members.length} Students</span>
+                            </div>
+                            <Star className="text-yellow-600 group-hover:text-yellow-400" size={16} />
+                          </div>
+                        ))}
+                        {firms.length === 0 && <p className="text-yellow-700 font-bold text-center py-12 italic">Waiting for teams to join the match...</p>}
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {gameState?.phase === PHASES.VOTER_REGISTRATION && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <section className="bg-red-900 p-8 rounded-3xl border-2 border-yellow-600 shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10"><Vote size={80} /></div>
+                      <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-yellow-400 uppercase">
+                        Register as Voter
+                      </h2>
+                      {myVoter ? (
+                        <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl space-y-3">
+                          <p className="text-yellow-400 font-black text-2xl mb-1">{myVoter.name}</p>
+                          <p className="text-sm text-yellow-600 font-bold uppercase tracking-tighter">Student ID: {myVoter.studentId}</p>
+                          <div className="pt-3 border-t border-yellow-400/30">
+                            <p className="text-yellow-400 font-black text-lg">Voting Tickets</p>
+                            <p className="text-3xl font-black text-yellow-300">{myVoter.remainingTickets} / {myVoter.totalTickets}</p>
+                            <p className="text-xs text-yellow-600 mt-1">Each team gets {calculateTicketsPerVoter()} ticket{calculateTicketsPerVoter() !== 1 ? 's' : ''} (half of {firms.length} teams, rounded up)</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <form onSubmit={registerVoter} className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-black text-yellow-600 uppercase mb-1 ml-1">Your Name</label>
+                            <input 
+                              type="text" 
+                              value={voterName} 
+                              onChange={e => setVoterName(e.target.value)}
+                              className="w-full px-4 py-3 bg-red-950 rounded-xl border-2 border-yellow-900/50 focus:border-yellow-400 text-yellow-50 outline-none transition-all placeholder:text-red-800"
+                              placeholder="e.g. John Doe"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-black text-yellow-600 uppercase mb-1 ml-1">Student ID</label>
+                            <input 
+                              type="text" 
+                              value={voterStudentId} 
+                              onChange={e => setVoterStudentId(e.target.value)}
+                              className="w-full px-4 py-3 bg-red-950 rounded-xl border-2 border-yellow-900/50 focus:border-yellow-400 text-yellow-50 outline-none transition-all placeholder:text-red-800"
+                              placeholder="e.g. 12345678"
+                              required
+                            />
+                          </div>
+                          <div className="p-4 bg-yellow-400/10 border border-yellow-500/30 rounded-xl">
+                            <p className="text-xs text-yellow-600 font-bold mb-1">Voting Tickets</p>
+                            <p className="text-yellow-400 font-black text-lg">{calculateTicketsPerVoter()} ticket{calculateTicketsPerVoter() !== 1 ? 's' : ''} per voter</p>
+                            <p className="text-[10px] text-yellow-700 mt-1">Based on {firms.length} registered team{firms.length !== 1 ? 's' : ''} (half, rounded up)</p>
+                          </div>
+                          <button type="submit" className="w-full bg-yellow-500 text-red-900 py-4 rounded-xl font-black hover:bg-yellow-400 transition shadow-xl transform active:scale-95 uppercase tracking-widest mt-2">
+                            Register to Vote
+                          </button>
+                        </form>
+                      )}
+                    </section>
+
+                    <section className="bg-red-900 p-8 rounded-3xl border-2 border-yellow-600 shadow-xl">
+                      <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-yellow-400 uppercase">
+                        Registered Voters ({voters.length})
+                      </h2>
+                      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        {voters.map(v => (
+                          <div key={v.id} className="flex justify-between items-center p-4 bg-red-800/40 border border-yellow-500/20 rounded-xl group hover:bg-red-800 transition shadow-sm">
+                            <div>
+                              <span className="font-black text-yellow-50 group-hover:text-yellow-400 block">{v.name}</span>
+                              <span className="text-[10px] text-yellow-700 font-black uppercase tracking-widest">ID: {v.studentId}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-yellow-400 font-black text-lg">{v.remainingTickets}/{v.totalTickets}</span>
+                              <span className="text-[10px] text-yellow-600 block">tickets</span>
+                            </div>
+                          </div>
+                        ))}
+                        {voters.length === 0 && <p className="text-yellow-700 font-bold text-center py-12 italic">Waiting for voters to register...</p>}
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {gameState?.phase === PHASES.VOLUNTEERING && (
+                  <div className="bg-red-900 p-10 rounded-[3rem] shadow-2xl border-4 border-yellow-500 text-center relative overflow-hidden animate-in zoom-in duration-500">
+                    <h2 className="text-4xl font-black text-yellow-400 mb-2 uppercase tracking-tighter">Festive Roll Call</h2>
+                    <p className="text-yellow-600 font-bold mb-10">Which firm wants to kick off the match?</p>
+                    
+                    <div className="flex flex-wrap justify-center gap-4 mb-10">
+                      {firms.map(f => (
+                        <div 
+                          key={f.id} 
+                          className={`px-8 py-4 rounded-2xl border-2 transition-all cursor-pointer shadow-md ${f.isVolunteering ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300 scale-110' : 'border-red-950 bg-red-950/40 opacity-50'}`}
+                          onClick={() => myFirm?.id === f.id && toggleVolunteerStatus()}
+                        >
+                          <span className="font-black text-xl">{f.name}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col items-center">
+                       <FestiveDrum 
+                          className="w-56 h-56 mb-8" 
+                          isPulsing={firms.some(f => f.isVolunteering)}
+                       />
+                       <p className="text-yellow-700 text-sm font-bold animate-pulse">Waiting for the Drum Beat to Begin!</p>
+                    </div>
+                  </div>
+                )}
+
+                {(gameState?.phase === PHASES.PRESENTING || gameState?.phase === PHASES.VOTING) && (
+                  <div className="space-y-8">
+                    {gameState.phase === PHASES.PRESENTING && !gameState?.timerEnd && (
+                      <div className="bg-yellow-400/20 border-4 border-yellow-500 p-8 rounded-3xl text-center">
+                        {isAdmin ? (
+                          <>
+                            <p className="text-yellow-400 font-bold text-xl mb-4">Ready to start presentation timer?</p>
+                            <button 
+                              onClick={startPresentationTimer}
+                              className="bg-yellow-500 text-red-900 px-12 py-4 rounded-xl font-black hover:bg-yellow-400 transition shadow-2xl uppercase tracking-widest text-lg"
+                            >
+                              Start Presentation Timer
+                            </button>
+                          </>
+                        ) : (
+                          <p className="text-yellow-400 font-bold text-xl">Waiting for organizer to start presentation timer...</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="bg-red-900 text-yellow-50 p-10 rounded-[2.5rem] shadow-2xl border-4 border-yellow-500 relative overflow-hidden">
+                      <div className="absolute -right-16 -top-16 opacity-5 pointer-events-none rotate-12">
+                        <PartyPopper size={300} />
+                      </div>
+                      
+                      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+                        <div className="text-center md:text-left">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Megaphone className="text-yellow-400" size={20} />
+                            <p className="text-yellow-600 uppercase tracking-[0.2em] text-xs font-black">
+                              {gameState.phase === PHASES.PRESENTING ? 'Live Presentation' : 'Community Vote'}
+                            </p>
+                          </div>
+                          <h2 className="text-5xl md:text-6xl font-black mb-2 text-yellow-400 tracking-tight">{currentPresenter?.name || 'Firm'}</h2>
+                          <p className="text-yellow-100 font-bold text-lg bg-red-800/50 inline-block px-4 py-1 rounded-lg">Featuring: {currentPresenter?.members?.join(', ') || 'Team'}</p>
+                        </div>
+                        
+                        {gameState?.timerEnd ? (
+                          <div className="text-center bg-red-950 p-8 rounded-3xl border-4 border-yellow-600 shadow-inner">
+                            <div className="text-7xl font-black text-yellow-400 tracking-tighter mb-3 font-mono">
+                              {formatTime(timeLeft)}
+                            </div>
+                            <div className="h-2 bg-red-900 w-full rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-yellow-400 shadow-[0_0_10px_#facc15]" 
+                                style={{ width: `${(timeLeft / (gameState.phase === PHASES.PRESENTING ? PRESENTATION_TIME : VOTING_TIME)) * 100}%`, transition: 'width 1s linear' }}
+                              ></div>
+                            </div>
+                          </div>
+                        ) : gameState.phase === PHASES.PRESENTING ? (
+                          <div className="text-center bg-red-950 p-8 rounded-3xl border-4 border-yellow-600 shadow-inner">
+                            <div className="text-4xl font-black text-yellow-600 tracking-tighter mb-3">
+                              Waiting...
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {gameState.phase === PHASES.VOTING && (
+                      <div className="bg-red-800 p-10 rounded-[2.5rem] border-4 border-yellow-400 shadow-2xl text-center relative animate-in slide-in-from-bottom-8">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-red-900 px-8 py-2 rounded-full font-black text-sm uppercase tracking-widest shadow-xl">Applaud with the Drum</div>
+                        <h3 className="text-3xl font-black text-yellow-50 mb-6">Support this presentation?</h3>
+                        
+                        {myVoter && (
+                          <div className="mb-6 p-4 bg-yellow-400/20 border-2 border-yellow-500 rounded-xl inline-block">
+                            <p className="text-yellow-300 font-black text-sm uppercase tracking-widest mb-1">Your Remaining Tickets</p>
+                            <p className="text-4xl font-black text-yellow-400">{myVoter.remainingTickets} / {myVoter.totalTickets}</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-col items-center gap-6">
+                          <div className="text-center mb-4">
+                            <div className="text-8xl font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]">{votes.length}</div>
+                            <div className="text-yellow-600 text-sm font-black uppercase tracking-widest mt-2">Total Votes</div>
+                          </div>
+
+                          <FestiveDrum 
+                            className="w-48 h-48" 
+                            onClick={submitVote}
+                            isPulsing={myVoter && myVoter.remainingTickets > 0 && !votes.find(v => v.voterId === user?.uid && v.presenterId === gameState?.currentPresenterId)}
+                          />
+                          <p className="text-yellow-400 font-black text-lg">
+                            {!myVoter 
+                              ? 'Please register as a voter first!' 
+                              : myVoter.remainingTickets <= 0 
+                                ? 'No tickets remaining!' 
+                                : votes.find(v => v.voterId === user?.uid && v.presenterId === gameState?.currentPresenterId) 
+                                  ? 'Your vote is in!' 
+                                  : 'Hit the Drum to Support!'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {currentChampion && (
+                      <div className="bg-yellow-400/10 border-4 border-yellow-500 p-8 rounded-3xl flex items-center justify-between shadow-xl">
+                        <div className="flex items-center gap-5">
+                          <div className="bg-yellow-400 p-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                            <Crown size={32} className="text-red-900" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black text-yellow-600 block uppercase tracking-widest">Current Leader</span>
+                            <span className="font-black text-3xl text-yellow-50 leading-tight">{currentChampion.name}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-yellow-600 block uppercase tracking-widest">Highest Score</span>
+                          <span className="font-black text-4xl text-yellow-400">{gameState?.championScore || 0}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {gameState?.phase === PHASES.COMPARING && (
+                  <div className="space-y-10 animate-in fade-in zoom-in duration-500">
+                     <div className="text-center">
+                        <h2 className="text-5xl font-black text-yellow-400 uppercase tracking-tighter italic">Match Results</h2>
+                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden md:block">
+                        <div className="bg-red-950 text-yellow-400 text-4xl font-black p-8 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)] border-8 border-yellow-500">VS</div>
+                      </div>
+
+                      <div className={`p-10 rounded-[3rem] border-4 transition-all ${gameState.challengerScore <= gameState.championScore ? 'bg-red-800 border-yellow-400 scale-105 shadow-2xl' : 'bg-red-950 border-red-900 opacity-30'}`}>
+                        <p className="text-yellow-500 font-black mb-3 flex items-center gap-1 uppercase tracking-widest text-xs">
+                          <Crown size={14} /> Defending Leader
+                        </p>
+                        <h3 className="text-3xl font-black mb-4 text-white">{currentChampion?.name || "Original"}</h3>
+                        <div className="text-8xl font-black text-yellow-400 leading-none">{gameState.championScore || 0}</div>
+                        <p className="text-yellow-600 font-black mt-6 uppercase text-sm tracking-[0.3em]">Total Votes</p>
+                      </div>
+
+                      <div className={`p-10 rounded-[3rem] border-4 transition-all ${gameState.challengerScore > gameState.championScore ? 'bg-red-800 border-yellow-400 scale-105 shadow-2xl' : 'bg-red-950 border-red-900 opacity-30'}`}>
+                        <p className="text-yellow-600 font-black mb-3 flex items-center gap-1 uppercase tracking-widest text-xs">
+                           Challenger Firm
+                        </p>
+                        <h3 className="text-3xl font-black mb-4 text-white">{currentPresenter?.name || 'Challenger'}</h3>
+                        <div className="text-8xl font-black text-yellow-400 leading-none">{gameState.challengerScore || 0}</div>
+                        <p className="text-yellow-600 font-black mt-6 uppercase text-sm tracking-[0.3em]">Total Votes</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-red-900 p-10 rounded-[3rem] text-center border-4 border-yellow-500 shadow-2xl">
+                        <h4 className="text-3xl font-black mb-8 text-yellow-50 uppercase tracking-tight">
+                            {gameState.challengerScore > gameState.championScore ? 
+                            `Success! ${currentPresenter?.name} takes the lead!` : 
+                            `${currentChampion?.name || currentPresenter?.name} keeps the top spot!`}
+                        </h4>
+                        {isAdmin && (
+                          <button onClick={nextChallenge} className="bg-yellow-500 text-red-900 px-12 py-5 rounded-2xl font-black text-xl hover:bg-yellow-400 transition shadow-2xl flex items-center gap-3 mx-auto uppercase tracking-widest">
+                            Next Challenger <ChevronRight />
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                )}
+
+                {gameState?.phase === PHASES.CHALLENGE_REGISTRATION && (
+                  <div className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="text-center mb-8">
+                      <h2 className="text-5xl font-black text-yellow-400 uppercase tracking-tighter mb-4">Challenge Registration Open</h2>
+                      <p className="text-yellow-600 text-xl font-bold">New teams can register and compete to challenge the current champion!</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Registration Form */}
+                      <section className="bg-red-900 p-8 rounded-3xl border-2 border-yellow-600 shadow-xl">
+                        <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-yellow-400 uppercase">
+                          <UserPlus size={24} /> Register New Team
+                        </h2>
+                        {myFirm ? (
+                          <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl">
+                            <p className="text-yellow-400 font-black text-2xl mb-1">{myFirm.name}</p>
+                            <p className="text-sm text-yellow-600 font-bold uppercase tracking-tighter">Team: {myFirm.members.join(', ')}</p>
+                          </div>
+                        ) : (
+                          <form onSubmit={registerFirm} className="space-y-4">
+                            <div>
+                              <label className="block text-xs font-black text-yellow-600 uppercase mb-1 ml-1">Firm Name</label>
+                              <input 
+                                type="text" 
+                                value={regFirmName} 
+                                onChange={e => setRegFirmName(e.target.value)}
+                                className="w-full bg-red-950 border-2 border-yellow-900 px-4 py-3 rounded-xl text-yellow-50 outline-none focus:border-yellow-500"
+                                placeholder="Enter firm name"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-yellow-600 uppercase mb-1 ml-1">Team Members</label>
+                              <input 
+                                type="text" 
+                                value={regMembers} 
+                                onChange={e => setRegMembers(e.target.value)}
+                                className="w-full bg-red-950 border-2 border-yellow-900 px-4 py-3 rounded-xl text-yellow-50 outline-none focus:border-yellow-500"
+                                placeholder="Names separated by commas"
+                              />
+                            </div>
+                            <button type="submit" className="w-full bg-yellow-500 text-red-900 py-4 rounded-xl font-black hover:bg-yellow-400 transition shadow-lg uppercase tracking-widest">
+                              Register Team
+                            </button>
+                          </form>
+                        )}
+                      </section>
+
+                      {/* Challenge Button */}
+                      <section className="bg-red-900 p-8 rounded-3xl border-2 border-yellow-600 shadow-xl">
+                        <h2 className="text-2xl font-black mb-6 flex items-center gap-2 text-yellow-400 uppercase">
+                          <Sparkles size={24} /> Challenge the Champion
+                        </h2>
+                        {!myFirm ? (
+                          <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl text-center">
+                            <p className="text-yellow-400 font-bold">Register your team first to challenge!</p>
+                          </div>
+                        ) : myFirm.hasPresented ? (
+                          <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl text-center">
+                            <p className="text-yellow-400 font-bold">Your team has already presented.</p>
+                          </div>
+                        ) : !gameState?.challengeStartTime ? (
+                          <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl text-center">
+                            <p className="text-yellow-400 font-black text-xl mb-2">Waiting for Organizer</p>
+                            <p className="text-yellow-600 text-sm">Organizer will announce start. Get ready!</p>
+                          </div>
+                        ) : challenges.find(c => c.firmId === user?.uid) ? (
+                          <div className="p-6 bg-yellow-400/10 border-2 border-yellow-400 rounded-2xl text-center">
+                            <p className="text-yellow-400 font-black text-xl mb-2">Challenge Registered!</p>
+                            <p className="text-yellow-600 text-sm">Waiting for organizer to select challenger...</p>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-yellow-600 mb-6 font-bold">Click as fast as you can to compete for the next challenger spot!</p>
+                            <button 
+                              onClick={clickChallenge}
+                              className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 py-8 rounded-2xl font-black hover:from-yellow-400 hover:to-yellow-500 transition shadow-2xl uppercase tracking-widest text-2xl transform hover:scale-105"
+                            >
+                              Challenge!
+                            </button>
+                          </div>
+                        )}
+                      </section>
+                    </div>
+
+                    {/* Current Champion Display */}
+                    {currentChampion && (
+                      <div className="bg-yellow-400/10 border-4 border-yellow-500 p-8 rounded-3xl text-center">
+                        <p className="text-xs font-black text-yellow-600 uppercase tracking-widest mb-2">Current Champion</p>
+                        <h3 className="text-4xl font-black text-yellow-400 mb-2">{currentChampion.name}</h3>
+                        <p className="text-yellow-600 font-bold">Score: {gameState.championScore || 0}</p>
+                      </div>
+                    )}
+
+                    {/* Admin: Announce Start & View Challenges */}
+                    {isAdmin && (
+                      <div className="bg-red-900/60 border-4 border-yellow-500 p-8 rounded-3xl">
+                        {!gameState?.challengeStartTime ? (
+                          <div className="text-center mb-6">
+                            <p className="text-yellow-400 font-bold text-lg mb-4">Ready to start challenge competition?</p>
+                            <button 
+                              onClick={announceChallengeStart}
+                              className="bg-yellow-500 text-red-900 px-12 py-4 rounded-xl font-black hover:bg-yellow-400 transition shadow-2xl uppercase tracking-widest text-lg"
+                            >
+                              Announce Start!
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center mb-6">
+                            <p className="text-yellow-400 font-black text-xl mb-2">Challenge Competition Started!</p>
+                            <p className="text-yellow-600 text-sm">Teams can now click Challenge</p>
+                          </div>
+                        )}
+                        <h3 className="text-2xl font-black text-yellow-400 mb-6 uppercase flex items-center gap-3">
+                          <BarChart3 size={24} /> Challenge Queue
+                        </h3>
+                        {challenges.length === 0 ? (
+                          <p className="text-yellow-600 font-bold text-center py-8">
+                            {!gameState?.challengeStartTime 
+                              ? "Announce start to begin challenge competition" 
+                              : "No challenges yet. Waiting for teams to click Challenge..."}
+                          </p>
+                        ) : (
+                          <div className="space-y-4">
+                            {challenges.map((challenge, idx) => {
+                              const firm = firms.find(f => f.id === challenge.firmId);
+                              return (
+                                <div 
+                                  key={challenge.id}
+                                  className={`p-6 rounded-2xl border-4 flex items-center justify-between ${
+                                    idx === 0 
+                                      ? 'bg-yellow-400/20 border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.5)]' 
+                                      : 'bg-red-950/60 border-yellow-900/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <span className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl ${
+                                      idx === 0 ? 'bg-yellow-400 text-red-900' : 'bg-red-900 text-yellow-400'
+                                    }`}>
+                                      #{idx + 1}
+                                    </span>
+                                    <div>
+                                      <p className="text-yellow-400 font-black text-xl">{challenge.firmName || firm?.name || 'Unknown'}</p>
+                                      <p className="text-yellow-600 text-xs">
+                                        {gameState?.challengeStartTime && challenge.timestamp >= gameState.challengeStartTime
+                                          ? `Time: ${((challenge.timestamp - gameState.challengeStartTime) / 1000).toFixed(2)}s`
+                                          : `Time: ${new Date(challenge.timestamp).toLocaleTimeString()}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {idx === 0 && (
+                                    <button 
+                                      onClick={() => startNextRound(challenge.firmId)}
+                                      className="bg-yellow-500 text-red-900 px-8 py-3 rounded-xl font-black hover:bg-yellow-400 transition shadow-lg uppercase tracking-widest"
+                                    >
+                                      Start Round
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {gameState?.phase === PHASES.FINAL_WINNER && (
+                  <div className="text-center py-16 space-y-10 animate-in fade-in duration-1000">
+                    <div className="inline-block p-1 bg-gradient-to-tr from-yellow-300 via-yellow-500 to-yellow-600 rounded-full mb-6 shadow-[0_0_60px_rgba(234,179,8,0.5)]">
+                      <div className="bg-red-900 rounded-full p-10 border-4 border-yellow-400">
+                        <Trophy size={120} className="text-yellow-400 mx-auto" />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <h2 className="text-7xl font-black text-yellow-400 uppercase tracking-tighter drop-shadow-2xl">GRAND CHAMPION</h2>
+                      <p className="text-yellow-600 font-black text-2xl tracking-[0.4em]">VICTOR OF THE CHALLENGE MATCH</p>
+                    </div>
+                    <div className="bg-red-900 p-16 rounded-[4rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-t-8 border-yellow-400 max-w-2xl mx-auto mb-12 border-x-4 border-b-4 border-yellow-700/50">
+                      <h1 className="text-7xl md:text-8xl font-black text-yellow-400 mb-6 tracking-tight">{currentChampion?.name || 'Winner'}</h1>
+                      <p className="text-3xl text-yellow-600 mb-10 font-black">Final Vote Tally: {gameState.championScore || 0}</p>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {currentChampion?.members?.map(m => (
+                          <span key={m} className="px-8 py-3 bg-yellow-400/10 border-2 border-yellow-500 rounded-full text-yellow-400 font-black text-lg uppercase">{m}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="max-w-2xl mx-auto bg-red-900/40 rounded-[3rem] p-10 shadow-2xl border-2 border-yellow-600/50">
+                      <h3 className="text-3xl font-black mb-8 flex items-center justify-center gap-3 text-yellow-400 uppercase tracking-tighter">
+                        <Medal size={32} /> Final Rankings
+                      </h3>
+                      <div className="space-y-5 text-left">
+                        {sortedHistory.map((entry, idx) => (
+                          <div key={`${entry.firmName}-${entry.timestamp}`} className="flex items-center justify-between p-6 bg-red-950/60 border-2 border-yellow-900/40 rounded-3xl group transition hover:border-yellow-500">
+                            <div className="flex items-center gap-6">
+                              <span className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg transform rotate-3 ${idx === 0 ? 'bg-yellow-400 text-red-900' : 'bg-red-900 text-yellow-700 border border-yellow-900'}`}>
+                                #{idx + 1}
+                              </span>
+                              <span className="font-black text-yellow-50 text-2xl tracking-tight">{entry.firmName}</span>
+                            </div>
+                            <span className="font-black text-yellow-400 text-3xl">{entry.score}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {isAdmin && (
+                      <button onClick={resetGame} className="flex items-center gap-3 mx-auto text-yellow-700 hover:text-yellow-400 transition font-black mt-12 uppercase tracking-[0.3em] text-sm">
+                        <RefreshCw size={20} /> Restart Match
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Live Leaderboard Sidebar */}
+                {gameState?.phase !== PHASES.FINAL_WINNER && gameState?.history?.length > 0 && (
+                  <section className="mt-16 animate-in slide-in-from-bottom-8 duration-700">
+                    <div className="flex items-center gap-3 mb-6">
+                      <BarChart3 className="text-yellow-400" size={24} />
+                      <h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest">Current Rankings</h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {sortedHistory.map((entry, idx) => (
+                        <div key={`${entry.firmName}-${idx}`} className="bg-red-900/60 p-6 rounded-3xl border-2 border-yellow-900/30 flex items-center justify-between hover:border-yellow-400 hover:scale-105 transition-all shadow-lg">
+                          <div className="flex items-center gap-4">
+                            <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${idx === 0 ? 'bg-yellow-400 text-red-900 shadow-[0_0_10px_#facc15]' : 'bg-red-950 text-yellow-700'}`}>
+                              {idx + 1}
+                            </span>
+                            <span className="font-black text-yellow-50 truncate max-w-[140px] uppercase text-xs tracking-wider">{entry.firmName}</span>
+                          </div>
+                          <span className="font-black text-yellow-400 text-xl">{entry.score}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* ORGANIZER ACCESS */}
+                <div className="mt-24 pt-10 border-t-2 border-yellow-900/30">
+                  {!isAdmin ? (
+                    <div className="flex flex-col items-center">
+                      <button 
+                        onClick={() => setShowAdmin(!showAdmin)} 
+                        className="text-yellow-900/40 hover:text-yellow-700 transition flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em]"
+                      >
+                        <Lock size={12} /> Organizer Access
+                      </button>
+                      {showAdmin && (
+                        <div className="mt-6 flex gap-3 animate-in slide-in-from-bottom-2">
+                          <input 
+                            type="password" 
+                            value={passcodeInput} 
+                            onChange={e => setPasscodeInput(e.target.value)}
+                            placeholder="Organizer Key"
+                            className="bg-red-950 border-2 border-yellow-900 px-4 py-2 rounded-xl text-sm text-yellow-50 outline-none w-40 focus:border-yellow-500"
+                          />
+                          <button onClick={checkPasscode} className="bg-yellow-500 text-red-900 px-5 py-2 rounded-xl font-black hover:bg-yellow-400 shadow-lg uppercase text-xs">Unlock</button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-400/10 border-4 border-yellow-500 p-8 rounded-[2.5rem] animate-in fade-in slide-in-from-bottom-6 duration-500 shadow-2xl">
+                      <h3 className="text-yellow-400 font-black text-lg uppercase mb-6 flex items-center gap-3">
+                        <ShieldCheck size={24} /> Match Organizer Controls
+                      </h3>
+                      <div className="flex flex-wrap gap-4">
+                        {gameState?.phase === PHASES.REGISTRATION && (
+                          <button onClick={advanceToVoterRegistration} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                            Open Voter Registration
+                          </button>
+                        )}
+                        {gameState?.phase === PHASES.VOTER_REGISTRATION && (
+                          <button onClick={advanceToVolunteering} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                            Open Volunteering
+                          </button>
+                        )}
+                        {gameState?.phase === PHASES.VOLUNTEERING && (
+                           <button onClick={pickFirstPresenter} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                              Start First Match
+                           </button>
+                        )}
+                        {gameState?.phase === PHASES.PRESENTING && (
+                          <>
+                            {!gameState?.timerEnd ? (
+                              <button onClick={startPresentationTimer} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                                Start Presentation Timer
+                              </button>
+                            ) : (
+                              <button onClick={startVoting} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                                Begin Peer Voting
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {gameState?.phase === PHASES.VOTING && (
+                          <button onClick={finalizeRound} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                            Finalize Vote Tally
+                          </button>
+                        )}
+                        {gameState?.phase === PHASES.COMPARING && (
+                          <>
+                            <button onClick={nextChallenge} className="flex-1 bg-yellow-500 text-red-900 py-4 rounded-2xl font-black hover:bg-yellow-400 shadow-xl uppercase text-xs tracking-widest">
+                              Next Challenge
+                            </button>
+                            <button onClick={endGame} className="flex-1 bg-purple-600 text-white py-4 rounded-2xl font-black hover:bg-purple-500 shadow-xl uppercase text-xs tracking-widest">
+                              End Game & Show Winner
+                            </button>
+                          </>
+                        )}
+                        {gameState?.phase === PHASES.CHALLENGE_REGISTRATION && (
+                          <button onClick={endGame} className="flex-1 bg-purple-600 text-white py-4 rounded-2xl font-black hover:bg-purple-500 shadow-xl uppercase text-xs tracking-widest">
+                            End Game & Show Winner
+                          </button>
+                        )}
+                        <button onClick={resetGame} className="bg-red-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-red-500 shadow-lg uppercase text-[10px]">
+                          Match Reset
+                        </button>
+                        <button onClick={() => setIsAdmin(false)} className="bg-slate-900 text-yellow-500 px-6 py-4 rounded-2xl font-black shadow-lg uppercase text-[10px]">
+                          Hide Panel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer info */}
+                <div className="mt-16 pb-12 flex flex-col md:flex-row justify-between items-center text-yellow-900/50 text-[10px] font-black uppercase tracking-[0.3em]">
+                  <div>Challenge Match Portal &bull; Professional Edition</div>
+                  <div className="flex items-center gap-3 mt-4 md:mt-0">
+                    <div className={`w-2 h-2 rounded-full ${user ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`}></div>
+                    {user ? `System Online: ${user.uid.slice(0, 8)}` : 'Connecting...'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Initialize React app
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
