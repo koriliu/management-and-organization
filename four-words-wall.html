@@ -36,6 +36,21 @@
         </div>
     </div>
 
+    <script>
+        window.addEventListener('error', function(e) {
+            var root = document.getElementById('root');
+            if (root && !document.getElementById('app-error')) {
+                root.innerHTML = '<div id="app-error" style="min-height:100vh;padding:24px;background:#fef2f2;color:#991b1b;font-family:system-ui,sans-serif;"><h2 style="margin-top:0;">Error</h2><pre style="background:#fff;padding:12px;overflow:auto;border-radius:8px;font-size:12px;">' + (e.message || '') + '</pre><p style="font-size:14px;">File: ' + (e.filename || '') + ' (line ' + (e.lineno || '') + ')</p><p>Check the Console (F12) for more.</p></div>';
+            }
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            var root = document.getElementById('root');
+            if (root && !document.getElementById('app-error')) {
+                root.innerHTML = '<div id="app-error" style="min-height:100vh;padding:24px;background:#fef2f2;color:#991b1b;font-family:system-ui,sans-serif;"><h2 style="margin-top:0;">Load error</h2><pre style="background:#fff;padding:12px;overflow:auto;border-radius:8px;font-size:12px;">' + (e.reason && (e.reason.message || e.reason)) + '</pre><p>Check the Console (F12) for more.</p></div>';
+            }
+        });
+    </script>
+
     <!-- Load at end of body so page renders first (fixes blank page on GitHub Pages) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -548,5 +563,6 @@
     </script>
 </body>
 </html>
+
 
 
