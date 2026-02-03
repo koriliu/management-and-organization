@@ -1,508 +1,1518 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Whiteboard - MM2021</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <style>
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes zoomIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Four Words: What Should Managers Do?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --navy: #1f3b57;
+      --forest: #1f5a46;
+      --beige: #f4e9d8;
+      --light-gray: #e4e7ec;
+      --accent-yellow: #ffd86b;
+      --accent-pink: #ffb3c1;
+      --accent-mint: #a8e6cf;
+      --accent-lilac: #c3c9ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #f8fafc, #dde4ee);
+      color: var(--navy);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(120deg, var(--navy), var(--forest));
+      color: #ffffff;
+      padding: 20px 24px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .prompt {
+      font-size: 1.4rem;
+      font-weight: 600;
+      max-width: 900px;
+      line-height: 1.3;
+    }
+
+    .subtext {
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.01em;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.2s ease;
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.98);
+      box-shadow: none;
+    }
+
+    .btn-primary {
+      background: #ffd86b;
+      color: #4b3c00;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #eef5ff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(4px);
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .legend-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--navy);
+    }
+
+    .wall {
+      position: relative;
+      flex: 1;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.7), transparent 55%),
+        linear-gradient(135deg, var(--beige), var(--light-gray));
+      overflow: hidden;
+    }
+
+    .wall-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 500px;
+      border-radius: 18px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background:
+        linear-gradient(#fbf7ef, #f0f4f8);
+      box-shadow:
+        0 15px 30px rgba(31, 59, 87, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+      overflow: hidden;
+    }
+
+    .wall-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(90deg, rgba(31, 59, 87, 0.04) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(31, 59, 87, 0.04) 1px, transparent 1px);
+      background-size: 64px 64px;
+      pointer-events: none;
+    }
+
+    .wall-icons {
+      position: absolute;
+      inset: 12px 12px auto auto;
+      display: flex;
+      gap: 8px;
+      opacity: 0.18;
+      font-size: 1.2rem;
+      pointer-events: none;
+    }
+
+    .sticky-layer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 24px;
+      overflow: visible;
+    }
+
+    .sample-notes-hint {
+      position: absolute;
+      left: 24px;
+      top: 16px;
+      font-size: 0.8rem;
+      color: rgba(31, 59, 87, 0.7);
+      background: rgba(255, 255, 255, 0.85);
+      padding: 4px 10px;
+      border-radius: 999px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      z-index: 5;
+    }
+
+    .sticky-note {
+      position: absolute;
+      min-width: 140px;
+      max-width: 240px;
+      padding: 14px 14px 12px;
+      border-radius: 10px;
+      box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+      cursor: grab;
+      user-select: none;
+      transform-origin: center;
+      animation: float 7s ease-in-out infinite alternate;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+      backdrop-filter: blur(1px);
+      z-index: 10;
+    }
+
+    .sticky-note:hover {
+      box-shadow:
+        0 10px 20px rgba(0, 0, 0, 0.18),
+        0 0 0 1px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px) rotate(-0.5deg) scale(1.02);
+      z-index: 20;
+    }
+
+    .sticky-note.dragging {
+      cursor: grabbing;
+      box-shadow:
+        0 12px 24px rgba(0, 0, 0, 0.22),
+        0 0 0 1px rgba(0, 0, 0, 0.15);
+      animation: none;
+      z-index: 100;
+    }
+
+    .sticky-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: rgba(20, 20, 20, 0.7);
+    }
+
+    .sticky-icon {
+      font-size: 0.95rem;
+    }
+
+    .sticky-body {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      word-wrap: break-word;
+      color: #1a1a1a;
+      min-height: 1.4em;
+    }
+
+    .sticky-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .sticky-meta {
+      white-space: nowrap;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sticky-like {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .sticky-like span {
+      font-size: 0.7rem;
+    }
+
+    .resize-handle {
+      position: absolute;
+      right: 5px;
+      bottom: 5px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    }
+
+    .resize-handle:hover {
+      background: #ffffff;
+    }
+
+    .sticky-note.large {
+      transform: scale(1.15);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.26);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .modal-close {
+      background: transparent;
+      border-radius: 999px;
+      padding: 4px 8px;
+      box-shadow: none;
+      font-size: 1.1rem;
+      color: #4b5563;
+    }
+
+    .modal-close:hover {
+      background: #f3f4f6;
+    }
+
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .field-label span.helper {
+      font-weight: 400;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--forest);
+      box-shadow: 0 0 0 2px rgba(31, 90, 70, 0.18);
+    }
+
+    .field-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .color-options {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 26px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .color-swatch.selected {
+      border-color: var(--navy);
+    }
+
+    .mini-note-preview {
+      flex: 1;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+      background: #fffbe6;
+      min-width: 130px;
+    }
+
+    .emoji-input {
+      width: 60px;
+      text-align: center;
+      font-size: 1.2rem;
+      padding: 6px 4px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    .status-error {
+      color: #b91c1c;
+      min-height: 16px;
+    }
+
+    .modal-footer {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #4b5563;
+      box-shadow: none;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-ghost:hover {
+      background: #f3f4f6;
+    }
+
+    .btn-primary-wide {
+      flex: 0 0 auto;
+      padding-inline: 18px;
+    }
+
+    .confetti-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 150;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 7px;
+      height: 14px;
+      opacity: 0.9;
+      border-radius: 2px;
+      animation: confetti-fall 1.6s ease-out forwards, confetti-spin 1.6s linear forwards;
+    }
+
+    .view-all-modal {
+      max-width: 700px;
+      max-height: 80vh;
+    }
+
+    .view-all-content {
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .view-all-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .view-all-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .view-all-item-number {
+      font-weight: 600;
+      color: var(--navy);
+      min-width: 24px;
+      font-size: 0.85rem;
+    }
+
+    .view-all-item-text {
+      flex: 1;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #1a1a1a;
+    }
+
+    .view-all-item-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+
+    .view-all-stats {
+      padding: 8px 0;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #4b5563;
+      text-align: center;
+    }
+
+    .connection-status {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .connection-status.connected {
+      background: #10b981;
+      color: white;
+    }
+
+    .connection-status.disconnected {
+      background: #ef4444;
+      color: white;
+    }
+
+    .connection-status.local {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .connection-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate3d(0, 0px, 0) rotate(-1deg);
+      }
+      100% {
+        transform: translate3d(0, 6px, 0) rotate(1deg);
+      }
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translate3d(0, -20px, 0);
+      }
+      100% {
+        transform: translate3d(10px, 220px, 0);
+        opacity: 0;
+      }
+    }
+
+    @keyframes confetti-spin {
+      0% {
+        transform: rotateZ(0deg);
+      }
+      100% {
+        transform: rotateZ(360deg);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 16px 14px;
+      }
+      .prompt {
+        font-size: 1.1rem;
+      }
+      .wall {
+        padding: 10px;
+      }
+      .sticky-layer {
+        padding: 14px;
+      }
+      .sample-notes-hint {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="root"></div>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <div>
+          <div class="prompt">
+            In no more than four words, describe what you think managers should do.
+          </div>
+          <div class="subtext">
+            Add your words to the shared wall. Keep it short, concrete, and focused on what managers should actually do.
+          </div>
+        </div>
+        <div class="controls">
+          <button id="addNoteBtn" class="btn-primary">
+            + Add Your Words
+          </button>
+          <button id="viewAllBtn" class="btn-secondary">
+            View All Words
+          </button>
+          <button id="shuffleBtn" class="btn-secondary">
+            Shuffle Wall
+          </button>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-icon">🧭</span>
+          <span>Leadership</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-icon">🤝</span>
+          <span>Teamwork</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-icon">📅</span>
+          <span>Organization</span>
+        </div>
+      </div>
+    </header>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
-        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { 
-            getAuth, 
-            signInAnonymously, 
-            onAuthStateChanged 
-        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { 
-            getFirestore, 
-            collection, 
-            addDoc, 
-            onSnapshot, 
-            query, 
-            orderBy, 
-            serverTimestamp 
-        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-        import {
-            getStorage,
-            ref,
-            uploadBytes,
-            getDownloadURL
-        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js';
+    <main class="wall">
+      <div class="wall-inner" id="wallInner">
+        <div class="wall-grid"></div>
+        <div class="wall-icons">
+          <span>🧭</span>
+          <span>🧩</span>
+          <span>📋</span>
+        </div>
+        <div class="sticky-layer" id="stickyLayer">
+          <div class="sample-notes-hint">Sample ideas to start the discussion</div>
+          <!-- Sample notes will be injected by JS -->
+        </div>
+      </div>
+    </main>
+  </div>
 
-        // --- Icons ---
-        const Camera = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-        );
-        const Plus = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        );
-        const X = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        );
-        const Maximize2 = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-        );
-        const Users = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        );
-        const Loader2 = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        );
-        const ImageIcon = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        );
+  <div class="modal-backdrop" id="noteModalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Add your four words</div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close">
+          ×
+        </button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="field-label">
+            <span>Your words</span>
+            <span class="helper">Maximum 4 words. No full sentences.</span>
+          </div>
+          <input
+            type="text"
+            id="noteTextInput"
+            placeholder="Example: Inspire the whole team"
+            autocomplete="off"
+          />
+          <div class="status-row">
+            <span id="wordCountStatus">0 / 4 words</span>
+            <span class="status-error" id="errorStatus"></span>
+          </div>
+        </div>
 
-        // --- Firebase Configuration ---
-        // REPLACE THIS WITH YOUR FIREBASE CONFIG (see setup instructions)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCK2T1hxyJvXa-KY69NGa-VoTOzdeILg_c",
-authDomain: "[lecture1-whiteboard.firebaseapp.com](http://lecture1-whiteboard.firebaseapp.com/)",
-projectId: "lecture1-whiteboard",
-storageBucket: "lecture1-whiteboard.firebasestorage.app",
-messagingSenderId: "112620583088",
-appId: "1:112620583088:web:f4cefe8a806d109d08a375"
-        };
+        <div class="field-row">
+          <div style="flex: 1 1 55%;">
+            <div class="field-label">
+              <span>Note color</span>
+            </div>
+            <div class="color-options" id="colorOptions">
+              <div class="color-swatch selected" data-color="#fff5a8" style="background:#fff5a8;"></div>
+              <div class="color-swatch" data-color="#ffdfef" style="background:#ffdfef;"></div>
+              <div class="color-swatch" data-color="#d9f7ff" style="background:#d9f7ff;"></div>
+              <div class="color-swatch" data-color="#e3ffd9" style="background:#e3ffd9;"></div>
+              <div class="color-swatch" data-color="#f6e4ff" style="background:#f6e4ff;"></div>
+            </div>
+          </div>
+          <div style="flex: 1 1 40%;">
+            <div class="field-label">
+              <span>Small icon (optional)</span>
+            </div>
+            <input
+              type="text"
+              id="emojiInput"
+              class="emoji-input"
+              maxlength="2"
+              placeholder="⭐"
+            />
+          </div>
+        </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
+        <div>
+          <div class="field-label">
+            <span>Nickname (optional)</span>
+            <span class="helper">Shown on hover, not on the note itself.</span>
+          </div>
+          <input
+            type="text"
+            id="nicknameInput"
+            placeholder="Example: Alex, Team 3"
+            maxlength="40"
+          />
+        </div>
 
-        // Collection name (simplified)
-        const COLLECTION_NAME = 'whiteboard_submissions';
+        <div>
+          <div class="field-label">
+            <span>Preview</span>
+          </div>
+          <div class="mini-note-preview" id="previewNote">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;margin-bottom:4px;">
+              <span id="previewIcon">⭐</span>
+              <span style="opacity:0.7;">manager wall</span>
+            </div>
+            <div id="previewText" style="font-weight:600;">Inspire the whole team</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="cancelBtn">Cancel</button>
+        <button class="btn-primary btn-primary-wide" id="saveNoteBtn">Add to wall</button>
+      </div>
+    </div>
+  </div>
 
-        // --- Image Compression Helper ---
-        const compressImage = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1200;
-                        const MAX_HEIGHT = 1200;
-                        let width = img.width;
-                        let height = img.height;
+  <div class="modal-backdrop" id="viewAllModalBackdrop" aria-hidden="true">
+    <div class="modal view-all-modal" role="dialog" aria-modal="true" aria-labelledby="viewAllTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="viewAllTitle">All Submitted Words</div>
+        <button class="modal-close" id="viewAllCloseBtn" aria-label="Close">
+          ×
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="view-all-content" id="viewAllContent">
+          <div class="view-all-list" id="viewAllList">
+            <!-- Items will be populated by JS -->
+          </div>
+          <div class="view-all-stats" id="viewAllStats">
+            No words submitted yet.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary btn-primary-wide" id="viewAllCloseBtn2">Close</button>
+      </div>
+    </div>
+  </div>
 
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
+  <div class="confetti-layer" id="confettiLayer"></div>
 
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        canvas.toBlob((blob) => {
-                            if (blob) {
-                                resolve(blob);
-                            } else {
-                                reject(new Error('Failed to compress image'));
-                            }
-                        }, 'image/jpeg', 0.85);
-                    };
-                    img.onerror = (error) => reject(error);
-                };
-                reader.onerror = (error) => reject(error);
-            });
-        };
+  <div class="connection-status" id="connectionStatus" style="display: none;">
+    <span class="connection-status-dot"></span>
+    <span id="connectionStatusText">Connecting...</span>
+  </div>
 
-        // --- Components ---
+  <!-- Firebase SDK: load at end of body so page content renders first (fixes blank page on GitHub Pages) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script>
+    (function () {
+      // ============================================
+      // FIREBASE CONFIGURATION
+      // ============================================
+      // TODO: Replace with your Firebase config
+      // Get this from: Firebase Console > Project Settings > Your apps > Web app
+      const firebaseConfig = {
+        apiKey: "AIzaSyA9rDtULYw5qiZeAqudIU-c4aJFAR-ZtcI",
+        authDomain: "management-and-organizat-7ccf9.firebaseapp.com",
+        databaseURL: "https://management-and-organizat-7ccf9-default-rtdb.firebaseio.com",
+        projectId: "management-and-organizat-7ccf9",
+        storageBucket: "management-and-organizat-7ccf9.firebasestorage.app",
+        messagingSenderId: "601222256182",
+        appId: "1:601222256182:web:4779d881961eae10c96a97"
+      };
 
-        const Lightbox = ({ submission, onClose }) => {
-            if (!submission) return null;
+      const MAX_WORDS = 4;
 
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
-                    <button 
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-                    >
-                        <X size={32} />
-                    </button>
-                    
-                    <div className="max-w-7xl w-full max-h-screen flex flex-col items-center">
-                        <img 
-                            src={submission.imageUrl} 
-                            alt={`Group ${submission.groupNumber}`} 
-                            className="max-h-[85vh] object-contain rounded-lg shadow-2xl border border-white/10"
-                        />
-                        <div className="mt-4 text-white text-xl font-medium flex items-center gap-2">
-                            <span className="bg-blue-600 px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wider">
-                                Group {submission.groupNumber}
-                            </span>
-                            {submission.createdAt && (
-                                <span className="text-gray-400 text-sm">
-                                    {new Date(submission.createdAt.seconds * 1000).toLocaleString()}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+      // Get DOM elements first
+      const addNoteBtn = document.getElementById("addNoteBtn");
+      const viewAllBtn = document.getElementById("viewAllBtn");
+      const shuffleBtn = document.getElementById("shuffleBtn");
+      const modalBackdrop = document.getElementById("noteModalBackdrop");
+      const viewAllModalBackdrop = document.getElementById("viewAllModalBackdrop");
+      const modalCloseBtn = document.getElementById("modalCloseBtn");
+      const viewAllCloseBtn = document.getElementById("viewAllCloseBtn");
+      const viewAllCloseBtn2 = document.getElementById("viewAllCloseBtn2");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const saveNoteBtn = document.getElementById("saveNoteBtn");
+      const noteTextInput = document.getElementById("noteTextInput");
+      const nicknameInput = document.getElementById("nicknameInput");
+      const emojiInput = document.getElementById("emojiInput");
+      const wordCountStatus = document.getElementById("wordCountStatus");
+      const errorStatus = document.getElementById("errorStatus");
+      const previewNote = document.getElementById("previewNote");
+      const previewText = document.getElementById("previewText");
+      const previewIcon = document.getElementById("previewIcon");
+      const colorOptions = document.getElementById("colorOptions");
+      const stickyLayer = document.getElementById("stickyLayer");
+      const wallInner = document.getElementById("wallInner");
+      const confettiLayer = document.getElementById("confettiLayer");
+      const viewAllList = document.getElementById("viewAllList");
+      const viewAllStats = document.getElementById("viewAllStats");
+      const connectionStatus = document.getElementById("connectionStatus");
+      const connectionStatusText = document.getElementById("connectionStatusText");
 
-        const UploadModal = ({ isOpen, onClose, onUpload, isUploading }) => {
-            const [file, setFile] = useState(null);
-            const [groupNumber, setGroupNumber] = useState('');
-            const [preview, setPreview] = useState(null);
-            const fileInputRef = useRef(null);
+      let currentColor = "#fff5a8";
+      let noteZIndex = 10;
+      let allNotes = [];
+      let notesMap = new Map(); // Track notes by ID for Firebase sync
 
-            useEffect(() => {
-                if (!isOpen) {
-                    setFile(null);
-                    setGroupNumber('');
-                    setPreview(null);
-                }
-            }, [isOpen]);
+      // Update connection status - must be defined before Firebase init
+      function updateConnectionStatus(status, text) {
+        if (connectionStatus && connectionStatusText) {
+          connectionStatus.style.display = "flex";
+          connectionStatus.className = "connection-status " + status;
+          connectionStatusText.textContent = text;
+        }
+      }
 
-            const handleFileChange = (e) => {
-                const selectedFile = e.target.files[0];
-                if (selectedFile) {
-                    setFile(selectedFile);
-                    const objectUrl = URL.createObjectURL(selectedFile);
-                    setPreview(objectUrl);
-                }
-            };
+      // Initialize Firebase (only if config is provided)
+      let database = null;
+      let notesRef = null;
+      const WALL_ID = "default-wall"; // Change this to create separate walls
 
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                if (!file || !groupNumber) {
-                    alert("Please select a file and enter a group number.");
-                    return;
-                }
-                await onUpload(file, groupNumber);
-            };
+      if (typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        try {
+          firebase.initializeApp(firebaseConfig);
+          database = firebase.database();
+          notesRef = database.ref('walls/' + WALL_ID + '/notes');
+          console.log("Firebase connected successfully!");
+          updateConnectionStatus("connected", "Connected - Shared");
+          
+          // Monitor connection status
+          database.ref('.info/connected').on('value', (snapshot) => {
+            if (snapshot.val() === true) {
+              updateConnectionStatus("connected", "Connected - Shared");
+            } else {
+              updateConnectionStatus("disconnected", "Disconnected");
+            }
+          });
+        } catch (error) {
+          console.error("Firebase initialization error:", error);
+          updateConnectionStatus("disconnected", "Connection Error");
+        }
+      } else {
+        if (typeof firebase === 'undefined') {
+          console.warn("Firebase SDK not loaded. Using local storage only.");
+        } else {
+          console.warn("Firebase not configured. Using local storage only (not shared across devices).");
+        }
+        updateConnectionStatus("local", "Local Only - Not Shared");
+      }
 
-            if (!isOpen) return null;
+      function openModal() {
+        modalBackdrop.classList.add("active");
+        modalBackdrop.setAttribute("aria-hidden", "false");
+        resetForm();
+        setTimeout(() => {
+          noteTextInput.focus();
+        }, 50);
+      }
 
-            return (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-[zoomIn_0.2s_ease-out]">
-                        <div className="bg-slate-50 border-b border-slate-100 p-4 flex justify-between items-center">
-                            <h3 className="text-lg font-semibold text-slate-800">Submit Work</h3>
-                            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                                <X size={24} />
-                            </button>
-                        </div>
-                        
-                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                            <div 
-                                onClick={() => fileInputRef.current?.click()}
-                                className={`
-                                    relative group cursor-pointer rounded-xl border-2 border-dashed 
-                                    ${preview ? 'border-blue-300 bg-slate-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}
-                                    h-48 flex flex-col items-center justify-center transition-all duration-200
-                                `}
-                            >
-                                {preview ? (
-                                    <img src={preview} alt="Preview" className="h-full w-full object-contain p-2" />
-                                ) : (
-                                    <div className="text-center p-4">
-                                        <div className="bg-blue-50 text-blue-500 rounded-full p-3 w-fit mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                            <Camera size={24} />
-                                        </div>
-                                        <p className="text-slate-600 font-medium">Click to upload photo</p>
-                                        <p className="text-slate-400 text-xs mt-1">Supports JPG, PNG</p>
-                                    </div>
-                                )}
-                                <input 
-                                    ref={fileInputRef}
-                                    type="file" 
-                                    accept="image/*" 
-                                    onChange={handleFileChange} 
-                                    className="hidden" 
-                                />
-                            </div>
+      function closeModal() {
+        modalBackdrop.classList.remove("active");
+        modalBackdrop.setAttribute("aria-hidden", "true");
+      }
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Group Number</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                        <Users size={18} />
-                                    </div>
-                                    <input
-                                        type="number"
-                                        value={groupNumber}
-                                        onChange={(e) => setGroupNumber(e.target.value)}
-                                        placeholder="e.g. 5"
-                                        className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                        required
-                                    />
-                                </div>
-                            </div>
+      function openViewAllModal() {
+        updateViewAllList();
+        viewAllModalBackdrop.classList.add("active");
+        viewAllModalBackdrop.setAttribute("aria-hidden", "false");
+      }
 
-                            <button
-                                type="submit"
-                                disabled={isUploading}
-                                className={`
-                                    w-full py-3 px-4 rounded-xl text-white font-medium shadow-lg shadow-blue-500/20
-                                    flex items-center justify-center gap-2
-                                    ${isUploading 
-                                        ? 'bg-slate-300 cursor-not-allowed shadow-none' 
-                                        : 'bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all'}
-                                `}
-                            >
-                                {isUploading ? (
-                                    <>
-                                        <Loader2 className="animate-spin" size={20} />
-                                        Uploading...
-                                    </>
-                                ) : (
-                                    "Post to Whiteboard"
-                                )}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            );
-        };
+      function closeViewAllModal() {
+        viewAllModalBackdrop.classList.remove("active");
+        viewAllModalBackdrop.setAttribute("aria-hidden", "true");
+      }
 
-        // --- Main App Component ---
+      // Set up event listeners
+      if (addNoteBtn) {
+        addNoteBtn.addEventListener("click", openModal);
+      }
+      if (viewAllBtn) {
+        viewAllBtn.addEventListener("click", openViewAllModal);
+      }
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener("click", closeModal);
+      }
+      if (viewAllCloseBtn) {
+        viewAllCloseBtn.addEventListener("click", closeViewAllModal);
+      }
+      if (viewAllCloseBtn2) {
+        viewAllCloseBtn2.addEventListener("click", closeViewAllModal);
+      }
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", closeModal);
+      }
 
-        function ClassroomWhiteboard() {
-            const [user, setUser] = useState(null);
-            const [submissions, setSubmissions] = useState([]);
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            const [isUploading, setIsUploading] = useState(false);
-            const [activeSubmission, setActiveSubmission] = useState(null);
-            const [loading, setLoading] = useState(true);
-            const [error, setError] = useState(null);
+      if (modalBackdrop) {
+        modalBackdrop.addEventListener("click", (e) => {
+          if (e.target === modalBackdrop) {
+            closeModal();
+          }
+        });
+      }
 
-            // Initialize Auth
-            useEffect(() => {
-                const initAuth = async () => {
-                    try {
-                        await signInAnonymously(auth);
-                    } catch (e) {
-                        console.error("Auth failed:", e);
-                        setError("Authentication failed. Please check Firebase configuration.");
-                        setLoading(false);
-                    }
-                };
-                initAuth();
-                
-                return onAuthStateChanged(auth, (u) => {
-                    setUser(u);
-                    if (u) setLoading(false);
-                });
-            }, []);
+      if (viewAllModalBackdrop) {
+        viewAllModalBackdrop.addEventListener("click", (e) => {
+          if (e.target === viewAllModalBackdrop) {
+            closeViewAllModal();
+          }
+        });
+      }
 
-            // Subscribe to Firestore Data
-            useEffect(() => {
-                if (!user) return;
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (modalBackdrop.classList.contains("active")) {
+            closeModal();
+          }
+          if (viewAllModalBackdrop.classList.contains("active")) {
+            closeViewAllModal();
+          }
+        }
+      });
 
-                const collectionRef = collection(db, COLLECTION_NAME);
-                const q = query(collectionRef, orderBy('createdAt', 'desc'));
+      function resetForm() {
+        noteTextInput.value = "";
+        nicknameInput.value = "";
+        emojiInput.value = "";
+        wordCountStatus.textContent = "0 / " + MAX_WORDS + " words";
+        errorStatus.textContent = "";
+        currentColor = "#fff5a8";
+        Array.from(colorOptions.querySelectorAll(".color-swatch")).forEach((sw) => {
+          sw.classList.toggle("selected", sw.dataset.color === currentColor);
+        });
+        previewNote.style.background = currentColor;
+        previewText.textContent = "Inspire the whole team";
+        previewIcon.textContent = "⭐";
+      }
 
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const docs = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    setSubmissions(docs);
-                }, (error) => {
-                    console.error("Firestore error:", error);
-                    setError("Failed to load submissions. Check Firestore rules.");
-                });
+      function countWords(text) {
+        const words = text
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0);
+        if (text.trim() === "") return 0;
+        return words.length;
+      }
 
-                return () => unsubscribe();
-            }, [user]);
+      function updateWordStatus() {
+        const text = noteTextInput.value;
+        const words = countWords(text);
+        wordCountStatus.textContent = words + " / " + MAX_WORDS + " words";
+        previewText.textContent = text || "Inspire the whole team";
 
-            // Handle Upload
-            const handleUpload = async (file, groupNumber) => {
-                if (!user) {
-                    alert("Not authenticated. Please refresh the page.");
-                    return;
-                }
-                
-                setIsUploading(true);
-                setError(null);
+        if (words > MAX_WORDS) {
+          errorStatus.textContent = "Please keep it to four words.";
+        } else {
+          errorStatus.textContent = "";
+        }
+      }
 
-                try {
-                    // Compress image
-                    const compressedBlob = await compressImage(file);
-                    
-                    // Upload to Firebase Storage
-                    const timestamp = Date.now();
-                    const fileName = `group_${groupNumber}_${timestamp}.jpg`;
-                    const storageRef = ref(storage, `whiteboard/${fileName}`);
-                    
-                    await uploadBytes(storageRef, compressedBlob);
-                    const downloadURL = await getDownloadURL(storageRef);
-                    
-                    // Save metadata to Firestore
-                    const collectionRef = collection(db, COLLECTION_NAME);
-                    await addDoc(collectionRef, {
-                        imageUrl: downloadURL,
-                        groupNumber: groupNumber,
-                        createdAt: serverTimestamp(),
-                        userId: user.uid,
-                        fileName: fileName
-                    });
-                    
-                    alert("Success! Your work has been uploaded.");
-                    setIsModalOpen(false);
-                } catch (error) {
-                    console.error("Upload failed:", error);
-                    setError("Upload failed: " + error.message);
-                    alert("Upload failed: " + error.message);
-                } finally {
-                    setIsUploading(false);
-                }
-            };
+      noteTextInput.addEventListener("input", updateWordStatus);
 
-            return (
-                <div 
-                    className="min-h-screen font-sans selection:bg-yellow-200"
-                    style={{
-                        backgroundColor: '#87CEEB',
-                        backgroundImage: `
-                            radial-gradient(circle at 10% 20%, rgb(220, 245, 255) 0%, transparent 20%),
-                            radial-gradient(circle at 80% 80%, rgb(220, 245, 255) 0%, transparent 25%),
-                            linear-gradient(135deg, #87CEEB 0%, #4facfe 100%)
-                        `,
-                        backgroundAttachment: 'fixed',
-                        backgroundSize: 'cover'
-                    }}
-                >
-                    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-white/40 shadow-sm">
-                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-blue-600 text-white p-2 rounded-lg shadow-blue-300 shadow-lg">
-                                    <ImageIcon size={24} />
-                                </div>
-                                <div>
-                                    <h1 className="font-bold text-xl leading-none text-slate-800">ClassBoard</h1>
-                                    <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wide">MM2021 Management and Organization</p>
-                                </div>
-                            </div>
-                            
-                            <button 
-                                onClick={() => setIsModalOpen(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-blue-500/30 active:scale-95 transition-all flex items-center gap-2 border border-blue-400"
-                            >
-                                <Plus size={20} />
-                                <span className="hidden sm:inline">Submit Work</span>
-                                <span className="sm:hidden">Add</span>
-                            </button>
-                        </div>
-                    </header>
+      colorOptions.addEventListener("click", (e) => {
+        const sw = e.target.closest(".color-swatch");
+        if (!sw) return;
+        currentColor = sw.dataset.color;
+        Array.from(colorOptions.querySelectorAll(".color-swatch")).forEach((el) => {
+          el.classList.toggle("selected", el === sw);
+        });
+        previewNote.style.background = currentColor;
+      });
 
-                    <main className="max-w-7xl mx-auto px-4 py-8">
-                        {error && (
-                            <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                                {error}
-                            </div>
-                        )}
-                        
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-white drop-shadow-md">
-                                <Loader2 className="animate-spin mb-4" size={32} />
-                                <p className="font-medium text-lg">Loading whiteboard...</p>
-                            </div>
-                        ) : submissions.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-[60vh] text-slate-600 border-4 border-dashed border-white/50 rounded-3xl bg-white/30 backdrop-blur-sm">
-                                <div className="bg-white/80 p-6 rounded-full mb-4 shadow-xl">
-                                    <Camera size={48} className="text-blue-400" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-slate-800 drop-shadow-sm">The board is empty</h3>
-                                <p className="max-w-xs text-center mt-2 text-slate-700 font-medium">Be the first group to submit your work!</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                                {submissions.map((item) => (
-                                    <div 
-                                        key={item.id}
-                                        onClick={() => setActiveSubmission(item)}
-                                        className="group relative aspect-[3/4] bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-zoom-in overflow-hidden border-4 border-white hover:-translate-y-1 hover:rotate-1"
-                                    >
-                                        <img 
-                                            src={item.imageUrl} 
-                                            alt={`Group ${item.groupNumber}`} 
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-blue-900/90 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <div className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white border border-white/50">
-                                                <Maximize2 size={24} />
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-bold text-lg tracking-tight drop-shadow-md">Group {item.groupNumber}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </main>
+      emojiInput.addEventListener("input", () => {
+        const val = emojiInput.value.trim();
+        previewIcon.textContent = val || "⭐";
+      });
 
-                    <UploadModal 
-                        isOpen={isModalOpen} 
-                        onClose={() => setIsModalOpen(false)} 
-                        onUpload={handleUpload}
-                        isUploading={isUploading}
-                    />
-                    
-                    {activeSubmission && (
-                        <Lightbox 
-                            submission={activeSubmission} 
-                            onClose={() => setActiveSubmission(null)} 
-                        />
-                    )}
-                </div>
-            );
+      function formatTime(date) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function createStickyNote({ text, color, icon, nickname, timestamp, noteId, x, y }) {
+        const note = document.createElement("div");
+        note.className = "sticky-note";
+        note.style.background = color;
+        note.style.zIndex = ++noteZIndex;
+
+        // Use provided noteId or generate one
+        if (!noteId) {
+          noteId = 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        note.dataset.noteId = noteId;
+
+        const now = timestamp ? new Date(timestamp) : new Date();
+        const timeLabel = formatTime(now);
+        const metaLabel = nickname ? nickname + " • " + timeLabel : timeLabel;
+
+        note.title = metaLabel;
+
+        const header = document.createElement("div");
+        header.className = "sticky-header";
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "sticky-icon";
+        iconSpan.textContent = icon || "⭐";
+        const headerRight = document.createElement("span");
+        headerRight.textContent = "mgr wall";
+        headerRight.style.opacity = "0.7";
+        header.appendChild(iconSpan);
+        header.appendChild(headerRight);
+
+        const body = document.createElement("div");
+        body.className = "sticky-body";
+        body.textContent = text;
+
+        const footer = document.createElement("div");
+        footer.className = "sticky-footer";
+        const meta = document.createElement("span");
+        meta.className = "sticky-meta";
+        meta.textContent = nickname ? nickname : "Anonymous";
+        const like = document.createElement("button");
+        like.type = "button";
+        like.className = "sticky-like";
+        like.innerHTML = '<span>👍</span><span data-count>0</span>';
+        like.addEventListener("click", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const countSpan = like.querySelector("[data-count]");
+          const current = parseInt(countSpan.textContent, 10) || 0;
+          countSpan.textContent = current + 1;
+        });
+        footer.appendChild(meta);
+        footer.appendChild(like);
+
+        const resizeHandle = document.createElement("div");
+        resizeHandle.className = "resize-handle";
+        resizeHandle.textContent = "↕";
+
+        resizeHandle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          note.classList.toggle("large");
+        });
+
+        note.appendChild(header);
+        note.appendChild(body);
+        note.appendChild(footer);
+        note.appendChild(resizeHandle);
+
+        const layerRect = stickyLayer.getBoundingClientRect();
+
+        const margin = 40;
+        let noteX, noteY;
+        
+        if (x !== undefined && y !== undefined) {
+          // Use provided position
+          noteX = x;
+          noteY = y;
+        } else {
+          // Generate random position
+          const maxX = Math.max(100, layerRect.width - 260);
+          const maxY = Math.max(100, layerRect.height - 200);
+          noteX = margin + Math.random() * maxX;
+          noteY = margin + Math.random() * maxY;
         }
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<ClassroomWhiteboard />);
-    </script>
+        note.style.left = noteX + "px";
+        note.style.top = noteY + "px";
+
+        note.style.animationDelay = (Math.random() * 4).toFixed(2) + "s";
+
+        makeDraggable(note);
+
+        stickyLayer.appendChild(note);
+
+        const noteData = {
+          id: noteId,
+          text,
+          color,
+          icon: icon || "⭐",
+          nickname: nickname || "Anonymous",
+          timestamp: now.getTime(),
+          x: noteX,
+          y: noteY
+        };
+
+        allNotes.push(noteData);
+        notesMap.set(noteId, { element: note, data: noteData });
+
+        // Save to Firebase if available
+        if (notesRef) {
+          notesRef.child(noteId).set(noteData).catch(error => {
+            console.error("Error saving note to Firebase:", error);
+          });
+        } else {
+          // Fallback to localStorage
+          saveToLocalStorage();
+        }
+
+        launchConfettiAt(noteX, noteY);
+      }
+
+      function makeDraggable(note) {
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let origLeft = 0;
+        let origTop = 0;
+
+        function onPointerDown(e) {
+          if (e.target.classList.contains("resize-handle") || e.target.classList.contains("sticky-like")) {
+            return;
+          }
+          isDragging = true;
+          note.classList.add("dragging");
+          note.style.zIndex = ++noteZIndex;
+          startX = e.clientX;
+          startY = e.clientY;
+
+          const rect = note.getBoundingClientRect();
+          const layerRect = stickyLayer.getBoundingClientRect();
+          origLeft = rect.left - layerRect.left;
+          origTop = rect.top - layerRect.top;
+
+          note.setPointerCapture(e.pointerId);
+        }
+
+        function onPointerMove(e) {
+          if (!isDragging) return;
+
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+
+          let newLeft = origLeft + dx;
+          let newTop = origTop + dy;
+
+          const layerRect = stickyLayer.getBoundingClientRect();
+          const noteRect = note.getBoundingClientRect();
+
+          const maxLeft = layerRect.width - noteRect.width;
+          const maxTop = layerRect.height - noteRect.height;
+
+          newLeft = Math.max(4, Math.min(newLeft, maxLeft - 4));
+          newTop = Math.max(4, Math.min(newTop, maxTop - 4));
+
+          note.style.left = newLeft + "px";
+          note.style.top = newTop + "px";
+
+          // Update position in Firebase
+          const noteId = note.dataset.noteId;
+          if (notesRef && noteId) {
+            notesRef.child(noteId).update({
+              x: newLeft,
+              y: newTop
+            }).catch(error => {
+              console.error("Error updating note position:", error);
+            });
+          }
+        }
+
+        function onPointerUp(e) {
+          if (!isDragging) return;
+          isDragging = false;
+          note.classList.remove("dragging");
+          note.releasePointerCapture(e.pointerId);
+        }
+
+        note.addEventListener("pointerdown", onPointerDown);
+        note.addEventListener("pointermove", onPointerMove);
+        note.addEventListener("pointerup", onPointerUp);
+        note.addEventListener("pointercancel", onPointerUp);
+      }
+
+      function handleSaveNote() {
+        const text = noteTextInput.value.trim();
+        const nickname = nicknameInput.value.trim();
+        const icon = emojiInput.value.trim() || "⭐";
+
+        const words = countWords(text);
+        if (!text) {
+          errorStatus.textContent = "Please enter your four words.";
+          noteTextInput.focus();
+          return;
+        }
+        if (words > MAX_WORDS) {
+          errorStatus.textContent = "Please keep it to four words.";
+          noteTextInput.focus();
+          return;
+        }
+
+        createStickyNote({
+          text,
+          color: currentColor,
+          icon,
+          nickname,
+        });
+        closeModal();
+      }
+
+      saveNoteBtn.addEventListener("click", handleSaveNote);
+
+      noteTextInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSaveNote();
+        }
+      });
+
+      function shuffleNotes() {
+        const notes = Array.from(stickyLayer.querySelectorAll(".sticky-note"));
+        if (!notes.length) return;
+
+        const layerRect = stickyLayer.getBoundingClientRect();
+        const margin = 40;
+
+        notes.forEach((note) => {
+          const noteRect = note.getBoundingClientRect();
+          const maxLeft = layerRect.width - noteRect.width;
+          const maxTop = layerRect.height - noteRect.height;
+          const randX = margin + Math.random() * Math.max(10, maxLeft - margin * 2);
+          const randY = margin + Math.random() * Math.max(10, maxTop - margin * 2);
+          note.style.left = randX + "px";
+          note.style.top = randY + "px";
+          note.style.zIndex = ++noteZIndex;
+        });
+      }
+
+      shuffleBtn.addEventListener("click", shuffleNotes);
+
+      function launchConfettiAt(x, y) {
+        const colors = [ "#ffd86b", "#ffb3c1", "#a8e6cf", "#c3c9ff", "#ffffff" ];
+        const count = 60 + Math.floor(Math.random() * 30);
+
+        const layerRect = confettiLayer.getBoundingClientRect();
+        const originX = x / (wallInner.getBoundingClientRect().width || 1);
+        const originY = y / (wallInner.getBoundingClientRect().height || 1);
+        const baseX = originX * layerRect.width;
+        const baseY = originY * layerRect.height;
+
+        for (let i = 0; i < count; i++) {
+          const piece = document.createElement("div");
+          piece.className = "confetti-piece";
+          const size = 6 + Math.random() * 4;
+          piece.style.width = size + "px";
+          piece.style.height = size * 1.8 + "px";
+
+          const spread = 80;
+          const offsetX = (Math.random() - 0.5) * spread;
+          piece.style.left = baseX + offsetX + "px";
+          piece.style.top = baseY - 40 + "px";
+          piece.style.backgroundColor = colors[i % colors.length];
+          const duration = 1.2 + Math.random() * 0.6;
+          piece.style.animationDuration = duration + "s, " + duration + "s";
+          piece.style.opacity = (0.7 + Math.random() * 0.3).toFixed(2);
+
+          confettiLayer.appendChild(piece);
+          piece.addEventListener("animationend", () => {
+            piece.remove();
+          });
+        }
+      }
+
+      function updateViewAllList() {
+        viewAllList.innerHTML = "";
+
+        if (allNotes.length === 0) {
+          viewAllStats.textContent = "No words submitted yet.";
+          return;
+        }
+
+        allNotes.forEach((note, index) => {
+          const item = document.createElement("div");
+          item.className = "view-all-item";
+
+          const number = document.createElement("div");
+          number.className = "view-all-item-number";
+          number.textContent = (index + 1) + ".";
+
+          const text = document.createElement("div");
+          text.className = "view-all-item-text";
+          text.textContent = note.text;
+
+          const meta = document.createElement("div");
+          meta.className = "view-all-item-meta";
+          const timeStr = formatTime(note.timestamp);
+          meta.textContent = note.nickname + " • " + timeStr;
+
+          item.appendChild(number);
+          item.appendChild(text);
+          item.appendChild(meta);
+          viewAllList.appendChild(item);
+        });
+
+        viewAllStats.textContent = "Total: " + allNotes.length + " submission" + (allNotes.length !== 1 ? "s" : "");
+      }
+
+      // Save to localStorage as fallback
+      function saveToLocalStorage() {
+        try {
+          const notesData = allNotes.map(note => ({
+            id: note.id,
+            text: note.text,
+            color: note.color,
+            icon: note.icon,
+            nickname: note.nickname,
+            timestamp: note.timestamp,
+            x: note.x,
+            y: note.y
+          }));
+          localStorage.setItem('fourWordsWall_' + WALL_ID, JSON.stringify(notesData));
+        } catch (error) {
+          console.error("Error saving to localStorage:", error);
+        }
+      }
+
+      // Load from localStorage as fallback
+      function loadFromLocalStorage() {
+        try {
+          const saved = localStorage.getItem('fourWordsWall_' + WALL_ID);
+          if (saved) {
+            const notesData = JSON.parse(saved);
+            notesData.forEach(noteData => {
+              createStickyNote({
+                text: noteData.text,
+                color: noteData.color,
+                icon: noteData.icon,
+                nickname: noteData.nickname,
+                timestamp: new Date(noteData.timestamp),
+                noteId: noteData.id,
+                x: noteData.x,
+                y: noteData.y
+              });
+            });
+            return true;
+          }
+        } catch (error) {
+          console.error("Error loading from localStorage:", error);
+        }
+        return false;
+      }
+
+      // Setup Firebase real-time listener
+      function setupFirebaseListener() {
+        if (!notesRef) return;
+
+        // Listen for new notes
+        notesRef.on('child_added', (snapshot) => {
+          const noteData = snapshot.val();
+          const noteId = snapshot.key;
+          
+          // Skip if we already have this note
+          if (notesMap.has(noteId)) return;
+
+          createStickyNote({
+            text: noteData.text,
+            color: noteData.color,
+            icon: noteData.icon,
+            nickname: noteData.nickname,
+            timestamp: new Date(noteData.timestamp),
+            noteId: noteId,
+            x: noteData.x,
+            y: noteData.y
+          });
+        });
+
+        // Listen for position updates
+        notesRef.on('child_changed', (snapshot) => {
+          const noteData = snapshot.val();
+          const noteId = snapshot.key;
+          const noteEntry = notesMap.get(noteId);
+          
+          if (noteEntry && noteEntry.element) {
+            // Update position if changed
+            if (noteData.x !== undefined && noteData.y !== undefined) {
+              noteEntry.element.style.left = noteData.x + "px";
+              noteEntry.element.style.top = noteData.y + "px";
+            }
+            // Update other properties if changed
+            if (noteData.text) {
+              const body = noteEntry.element.querySelector('.sticky-body');
+              if (body) body.textContent = noteData.text;
+            }
+          }
+        });
+
+        // Listen for deleted notes
+        notesRef.on('child_removed', (snapshot) => {
+          const noteId = snapshot.key;
+          const noteEntry = notesMap.get(noteId);
+          if (noteEntry && noteEntry.element) {
+            noteEntry.element.remove();
+            notesMap.delete(noteId);
+            allNotes = allNotes.filter(n => n.id !== noteId);
+          }
+        });
+      }
+
+      function addSampleNotes() {
+        // Only add samples if no notes exist
+        if (allNotes.length > 0) return;
+
+        const samples = [
+          {
+            text: "Inspire the whole team",
+            color: "#fff5a8",
+            icon: "🧭",
+            nickname: "Sample",
+            timestamp: new Date(Date.now() - 3600000),
+          },
+          {
+            text: "Remove obstacles for others",
+            color: "#d9f7ff",
+            icon: "🤝",
+            nickname: "Sample",
+            timestamp: new Date(Date.now() - 1800000),
+          },
+          {
+            text: "Set clear shared goals",
+            color: "#ffdfef",
+            icon: "📋",
+            nickname: "Sample",
+            timestamp: new Date(Date.now() - 900000),
+          },
+        ];
+
+        samples.forEach((s) => {
+          createStickyNote(s);
+        });
+      }
+
+      window.addEventListener("load", () => {
+        if (notesRef) {
+          // Use Firebase
+          setupFirebaseListener();
+          // Load existing notes from Firebase (they'll come through the listener)
+        } else {
+          // Use localStorage fallback
+          const loaded = loadFromLocalStorage();
+          if (!loaded) {
+            addSampleNotes();
+          }
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
 
