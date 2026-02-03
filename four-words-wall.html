@@ -30,7 +30,11 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div id="app-loading" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b,#334155);color:#e2e8f0;font-family:system-ui,sans-serif;font-size:1.1rem;">
+            Loading whiteboard…
+        </div>
+    </div>
 
     <!-- Load at end of body so page renders first (fixes blank page on GitHub Pages) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -528,9 +532,21 @@
             );
         }
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<ClassroomWhiteboard />);
+        const rootEl = document.getElementById('root');
+        try {
+            const root = createRoot(rootEl);
+            root.render(<ClassroomWhiteboard />);
+        } catch (e) {
+            rootEl.innerHTML = '<div style="min-height:100vh;padding:24px;background:#fef2f2;color:#991b1b;font-family:system-ui,sans-serif;"><h2 style="margin-top:0;">Error loading app</h2><pre style="background:#fff;padding:12px;overflow:auto;border-radius:8px;">' + (e.message || String(e)) + '</pre><p>Open the browser console (F12) for more details.</p></div>';
+        }
+        setTimeout(function() {
+            const loading = document.getElementById('app-loading');
+            if (loading && loading.parentElement === rootEl) {
+                rootEl.innerHTML = '<div style="min-height:100vh;padding:24px;background:#fef3c7;color:#92400e;font-family:system-ui,sans-serif;"><h2 style="margin-top:0;">Still loading?</h2><p>If the whiteboard did not appear, press <strong>F12</strong> to open Developer Tools and check the <strong>Console</strong> tab for errors.</p></div>';
+            }
+        }, 8000);
     </script>
 </body>
 </html>
+
 
